@@ -1,0 +1,9 @@
+[package]
+name = "gamebrust"
+version = "0.1.1"
+authors = ["Gabriel Roldan <luisgabrielroldan@gmail.com>"]
+edition = "2018"
+
+
+[dependencies]
+core = { path = "core" }
