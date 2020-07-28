@@ -1,12 +1,7 @@
-#[allow(dead_code)]
 mod cpu;
-#[allow(dead_code)]
 mod io;
-#[allow(dead_code)]
 pub mod cartridge;
-#[allow(dead_code)]
 mod memory;
-#[allow(dead_code)]
 mod ppu;
 
 use cpu::CPU;

@@ -1,5 +1,6 @@
 pub mod timer;
 
+#[allow(dead_code)]
 pub enum Flag {
     VBlank = 0,
     LCDStat = 1,

@@ -67,7 +67,7 @@ pub struct Header {
 impl Header {
     pub fn read(rom_data: &Vec<u8>) -> Self {
         let (ram_size, ram_banks) = Header::read_ram_size(rom_data);
-        let (rom_size, rom_banks) = Header::read_ram_size(rom_data);
+        let (rom_size, rom_banks) = Header::read_rom_size(rom_data);
         let cgb = Header::read_cgb(rom_data);
 
         Self {

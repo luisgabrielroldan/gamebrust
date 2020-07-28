@@ -258,7 +258,7 @@ pub fn decode(opcode: u8) -> Option<Opcode> {
         0xF8 => Some(LD(Reg16(HL), SPImmI8)),
         0xF9 => Some(LD(Reg16(SP), Reg16(HL))),
         0xFA => Some(LD(Reg8(A), MemImmU16)),
-        0xFB => Some(DI),
+        0xFB => Some(EI),
         0xFC => None,
         0xFD => None,
         0xFE => Some(CP(Reg8(A), ImmU8)),

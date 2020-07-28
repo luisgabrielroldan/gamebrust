@@ -1,3 +1,4 @@
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy)]
 pub enum R8 {
     A,
@@ -10,6 +11,7 @@ pub enum R8 {
     L,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy)]
 pub enum R16 {
     AF,
