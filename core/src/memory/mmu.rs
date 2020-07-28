@@ -1,19 +1,23 @@
-use crate::io::IntFlag;
+use crate::io::timer::Timer;
 use crate::memory::Memory;
 
 pub struct MMU {
-    intf: IntFlag,
+    intf: u8,
+    timer: Timer,
 }
 
 #[allow(dead_code)]
 impl MMU {
     pub fn new() -> Self {
         Self {
-            intf: IntFlag::from(0),
+            intf: 0,
+            timer: Timer::new(),
         }
     }
 
-    pub fn step(&mut self, _ticks: u32) {}
+    pub fn step(&mut self, ticks: u32) {
+        self.intf |= self.timer.step(ticks);
+    }
 }
 
 impl Memory for MMU {

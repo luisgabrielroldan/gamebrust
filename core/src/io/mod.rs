@@ -1,3 +1,5 @@
+pub mod timer;
+
 pub enum Flag {
     VBlank = 0,
     LCDStat = 1,
@@ -6,16 +8,6 @@ pub enum Flag {
     Joypad = 4,
 }
 
-pub struct IntFlag {
-    pub value: u8,
-}
-
-impl IntFlag {
-    pub fn from(value: u8) -> Self {
-        Self { value }
-    }
-
-    pub fn raise(&mut self, flag: Flag) {
-        self.value |= 1 << (flag as u8);
-    }
+pub fn intf_raise(flags: u8, flag: Flag) -> u8{
+    flags | (1 << (flag as u8))
 }

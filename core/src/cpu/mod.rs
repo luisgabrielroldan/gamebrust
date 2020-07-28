@@ -27,6 +27,17 @@ impl CPU {
         }
     }
 
+    pub fn step(&mut self, mem: &mut dyn Memory) -> u32 {
+        self.handle_ime();
+        let ticks = self.execute_next(mem);
+
+        ticks
+    }
+
+    fn handle_ime(&mut self) {
+        self.ime = self.ime_next;
+    }
+
     fn execute_next(&mut self, mem: &mut dyn Memory) -> u32 {
         use registers::R16::*;
         use registers::R8::*;
@@ -735,17 +746,6 @@ impl CPU {
         let v = mem.r16(self.reg.sp);
         self.reg.sp = self.reg.sp.wrapping_add(2);
         v
-    }
-
-    pub fn step(&mut self, mem: &mut dyn Memory) -> u32 {
-        self.handle_ime();
-        let ticks = self.execute_next(mem);
-
-        ticks
-    }
-
-    fn handle_ime(&mut self) {
-        self.ime = self.ime_next;
     }
 
     fn add_u16_i8(&self, a: u16, b: i8) -> u16 {

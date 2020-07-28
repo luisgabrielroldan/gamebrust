@@ -4,6 +4,8 @@ mod cpu;
 mod io;
 #[allow(dead_code)]
 mod memory;
+#[allow(dead_code)]
+mod ppu;
 
 use cpu::CPU;
 use memory::MMU;
@@ -33,7 +35,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn it_works() {
-        let system = System::new();
+    fn create_system() {
+        System::new();
     }
 }
