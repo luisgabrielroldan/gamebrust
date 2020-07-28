@@ -51,6 +51,6 @@ mod tests {
                 _ => panic!("Error!"),
             };
 
-        System::new(cartridge);
+        System::new(cartridge, true);
     }
 }

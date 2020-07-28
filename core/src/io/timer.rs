@@ -54,6 +54,27 @@ impl Timer {
         }
     }
 
+    pub fn get_tac(&self) -> u8 {
+        (if self.get_enabled() { 1 << 2 } else { 0 })
+            | (match self.get_divider() {
+                Divider::By1024 => 0,
+                Divider::By16 => 1,
+                Divider::By64 => 2,
+                Divider::By256 => 3,
+            } as u8)
+    }
+
+    pub fn set_tac(&mut self, v: u8) {
+        self.set_enabled((v & 2) != 0);
+        match v & 3 {
+            0 => self.set_divider(Divider::By1024),
+            1 => self.set_divider(Divider::By16),
+            2 => self.set_divider(Divider::By64),
+            3 => self.set_divider(Divider::By256),
+            _ => {}
+        };
+    }
+
     pub fn set_div(&mut self, _: u8) {
         self.div = 0;
     }

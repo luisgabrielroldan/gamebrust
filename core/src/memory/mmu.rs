@@ -1,4 +1,4 @@
-use crate::io::timer::{Timer, Divider};
+use crate::io::timer::Timer;
 use crate::memory::Memory;
 use crate::memory::Ram;
 use crate::memory::bootrom::DMG1;
@@ -35,6 +35,7 @@ impl MMU {
 
     pub fn step(&mut self, ticks: u32) {
         self.intf |= self.timer.step(ticks);
+        self.intf |= self.ppu.step(ticks);
     }
 
     fn io_read(&self, addr: u16) -> u8 {
@@ -44,15 +45,7 @@ impl MMU {
             0xFF04 => self.timer.get_div(),
             0xFF05 => self.timer.get_counter(),
             0xFF06 => self.timer.get_modulo(),
-            0xFF07 => {
-                (if self.timer.get_enabled() { 1 << 2 } else { 0 })
-                    | (match self.timer.get_divider() {
-                        Divider::By1024 => 0,
-                        Divider::By16 => 1,
-                        Divider::By64 => 2,
-                        Divider::By256 => 3,
-                    } as u8)
-            }
+            0xFF07 => self.timer.get_tac(),
             0xFF0F => self.intf,
             0xFF10..=0xFF3F => 0, // TODO: Implement sound someday...
             0xFF40..=0xFF4F => self.ppu.read(addr),
@@ -72,19 +65,8 @@ impl MMU {
             0xFF04 => self.timer.set_div(v),
             0xFF05 => self.timer.set_counter(v),
             0xFF06 => self.timer.set_modulo(v),
-            0xFF07 => {
-                self.timer.set_enabled((v & 2) != 0);
-                match v & 3 {
-                    0 => self.timer.set_divider(Divider::By1024),
-                    1 => self.timer.set_divider(Divider::By16),
-                    2 => self.timer.set_divider(Divider::By64),
-                    3 => self.timer.set_divider(Divider::By256),
-                    _ => {}
-                };
-            }
-            0xFF0F => {
-                self.intf = v;
-            }
+            0xFF07 => self.timer.set_tac(v),
+            0xFF0F => { self.intf = v; }
             0xFF10..=0xFF3F => {} // TODO: Implement sound someday...
             // 0xFF46 => self.oam_dma(v),
             0xFF40..=0xFF4F => self.ppu.write(addr, v),
@@ -112,7 +94,6 @@ impl Memory for MMU {
             0xA000..=0xBFFF => self.cartridge.read(addr),
             0xC000..=0xCFFF | 0xE000..=0xEFFF => self.wram.read(addr & 0x0FFF),
             0xD000..=0xDFFF | 0xF000..=0xFDFF => self.wram.read(0x1000 | (addr & 0x0FFF)),
-
             0xFE00..=0xFE9F => self.ppu.read(addr),
             0xFF00..=0xFF7F => self.io_read(addr),
             0xFF80..=0xFFFE => self.zram.read(addr - 0xFF80),
@@ -130,7 +111,6 @@ impl Memory for MMU {
             0xD000..=0xDFFF | 0xF000..=0xFDFF => self.wram.write(0x1000 | (addr & 0x0FFF), v),
             0xFE00..=0xFE9F => self.ppu.write(addr, v),
             0xFF00..=0xFF7F => self.io_write(addr, v),
-
             0xFF80..=0xFFFE => self.zram.write(addr - 0xFF80, v),
             0xFFFF => self.io_write(addr, v),
             _ => { println!("Warning: MMU: Attempt to WRITE on unmapped area: 0x{:04X}", addr); }

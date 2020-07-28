@@ -9,6 +9,10 @@ impl PPU {
         Self {
         }
     }
+
+    pub fn step(&mut self, _ticks: u32) -> u8 {
+        0
+    }
 }
 
 impl Memory for PPU {

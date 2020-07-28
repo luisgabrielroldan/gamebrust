@@ -41,10 +41,63 @@ impl CPU {
     }
 
     pub fn step(&mut self, mem: &mut dyn Memory) -> u32 {
+        let mc = self.handle_interrupts(mem);
+
         self.handle_ime();
-        let ticks = self.execute_next(mem);
+
+        let ticks = if mc != 0 {
+            mc * 4
+        } else if self.halted {
+            4
+        } else {
+            self.execute_next(mem) * 4
+        };
 
         ticks
+    }
+
+    fn handle_interrupts(&mut self, mem: &mut dyn Memory) -> u32 {
+        if !self.ime && !self.halted {
+            return 0;
+        }
+
+        let intfs = mem.read(0xFF0F);
+        let inte = mem.read(0xFFFF);
+
+        let filtered_intfs = inte & intfs;
+
+        if filtered_intfs == 0 {
+            return 0;
+        }
+
+        self.halted = false;
+
+        if !self.ime {
+            return 0;
+        }
+
+        let int_index = filtered_intfs.trailing_zeros() as u8;
+
+        // Ack interrupt
+        let new_intfs = intfs & !(1 << int_index);
+        mem.write(0xFF0F, new_intfs);
+
+        // Disable interrupts
+        self.ime = false;
+
+        self.stack_push(mem, self.reg.pc);
+
+        self.reg.pc = self.get_int_routine_addr(int_index);
+
+        // if int_index == 0 {
+        //     println!("INTERRUPT {:04x} EXECUTED! {:02x}-{:02x}", self.reg.pc, inte, intfs);
+        // }
+
+        5
+    }
+
+    fn get_int_routine_addr(&self, n: u8) -> u16 {
+        0x0040 | ((n as u16) << 3)
     }
 
     fn handle_ime(&mut self) {
@@ -57,7 +110,7 @@ impl CPU {
         use Opcode::*;
         use Oper::*;
 
-        let instr_addr = self.reg.pc;
+        // let instr_addr = self.reg.pc;
 
         let opcode = self.imm_u8(mem);
 
