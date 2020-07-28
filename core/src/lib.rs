@@ -8,6 +8,10 @@ use cpu::CPU;
 use memory::MMU;
 use cartridge::Cartridge;
 
+pub trait Display {
+    fn update(&mut self, _framebuffer: &Vec<u32>) { }
+}
+
 pub struct System {
     cpu: CPU,
     mmu: MMU,
@@ -15,7 +19,7 @@ pub struct System {
 
 #[allow(dead_code)]
 impl System {
-    pub fn new(cartridge: Cartridge, bootroom: bool) -> Self {
+    pub fn new(cartridge: Cartridge, display: Box<dyn Display>, bootroom: bool) -> Self {
         let cpu = 
             match bootroom {
                 true => CPU::new(),
@@ -24,7 +28,7 @@ impl System {
 
         Self {
             cpu: cpu,
-            mmu: MMU::new(cartridge, bootroom),
+            mmu: MMU::new(cartridge, display, bootroom),
         }
     }
 
@@ -38,6 +42,11 @@ impl System {
 mod tests {
     use super::*;
 
+    struct DummyDisplay {}
+
+    impl Display for DummyDisplay {
+    }
+
     #[test]
     fn create_system() {
         let cartridge =
@@ -46,6 +55,6 @@ mod tests {
                 _ => panic!("Error!"),
             };
 
-        System::new(cartridge, true);
+        System::new(cartridge, Box::new(DummyDisplay{}), true);
     }
 }

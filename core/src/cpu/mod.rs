@@ -530,6 +530,13 @@ impl CPU {
                 self.reg.set_r8(dr, v);
                 2
             }
+            // LD (r16), u8
+            LD(Mem(ar), ImmU8) => {
+                let a = self.reg.get_r16(ar);
+                let v = self.imm_u8(mem);
+                mem.write(a, v);
+                3
+            }
             // LD (r16), r8
             LD(Mem(ar), Reg8(sr)) => {
                 let a = self.reg.get_r16(ar);
