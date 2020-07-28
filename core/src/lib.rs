@@ -7,6 +7,7 @@ mod ppu;
 use cpu::CPU;
 use memory::MMU;
 use cartridge::Cartridge;
+use crate::io::joypad::JoypadAdapter;
 
 pub trait Display {
     fn update(&mut self, _framebuffer: &Vec<u32>) { }
@@ -36,6 +37,10 @@ impl System {
         let ticks = self.cpu.step(&mut self.mmu);
         self.mmu.step(ticks);
     }
+
+    pub fn get_joypad_adapter(&mut self) -> &mut dyn JoypadAdapter {
+        self.mmu.get_joypad_adapter()
+    }
 }
 
 #[cfg(test)]
@@ -55,6 +60,15 @@ mod tests {
                 _ => panic!("Error!"),
             };
 
-        System::new(cartridge, Box::new(DummyDisplay{}), true);
+        let mut system = System::new(cartridge, Box::new(DummyDisplay{}), true);
+
+        system.step();
+
+        { 
+            let joypad = system.get_joypad_adapter();
+            joypad.pressed(crate::io::joypad::JoypadKey::Start);
+        }
+
+        system.step();
     }
 }

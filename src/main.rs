@@ -1,10 +1,9 @@
-use core::System;
 use core::cartridge::Cartridge;
 use core::Display;
-
+use core::System;
 
 struct DummyDisplay {}
-impl Display for DummyDisplay { }
+impl Display for DummyDisplay {}
 
 fn main() {
     let cartridge =
@@ -14,7 +13,7 @@ fn main() {
             _ => panic!("Error!"),
         };
 
-    let display = Box::new(DummyDisplay{});
+    let display = Box::new(DummyDisplay {});
 
     let mut system = System::new(cartridge, display, true);
 

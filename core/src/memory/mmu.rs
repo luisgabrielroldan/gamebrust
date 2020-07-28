@@ -1,4 +1,5 @@
 use crate::io::timer::Timer;
+use crate::io::joypad::{Joypad, JoypadAdapter};
 use crate::memory::Memory;
 use crate::memory::Ram;
 use crate::memory::bootrom::DMG1;
@@ -12,6 +13,7 @@ pub struct MMU {
     bootrom: bool,
     cartridge: Cartridge,
     timer: Timer,
+    joypad: Joypad,
     ppu: PPU,
     wram: Ram,
     zram: Ram,
@@ -26,6 +28,7 @@ impl MMU {
             inte: 0,
             bootrom: bootrom,
             cartridge: cartridge,
+            joypad: Joypad::new(),
             timer: Timer::new(),
             ppu: PPU::new(display),
             wram: Ram::new(0x8000),
@@ -37,11 +40,16 @@ impl MMU {
     pub fn step(&mut self, ticks: u32) {
         self.intfs |= self.timer.step(ticks);
         self.intfs |= self.ppu.step(ticks);
+        self.intfs |= self.joypad.step();
+    }
+
+    pub fn get_joypad_adapter(&mut self) -> &mut dyn JoypadAdapter {
+        &mut self.joypad
     }
 
     fn io_read(&self, addr: u16) -> u8 {
         match addr {
-            0xFF00 => { 0 }, //self.joypad.read(),
+            0xFF00 => self.joypad.read(),
             0xFF01..=0xFF02 => 0xFF,
             0xFF04 => self.timer.get_div(),
             0xFF05 => self.timer.get_counter(),
@@ -54,13 +62,13 @@ impl MMU {
             // 0xFF51..=0xFF55 => 0, // TODO DMA 
             0xFF68..=0xFF6B => self.ppu.read(addr),
             0xFFFF => self.inte,
-            _ => { println!("Warning: MMU: Attempt to READ from unmapped IO area: 0x{:04X}", addr); 0xFF }
+            _ => { println!("Warning: Attempt to READ from unmapped IO area: 0x{:04X}", addr); 0xFF }
         }
     }
 
     fn io_write(&mut self, addr: u16, v: u8) {
         match addr {
-            0xFF00 => { }, //self.joypad.write(v),
+            0xFF00 => self.joypad.write(v),
             0xFF01 => { self.sb = v; }
             0xFF02 => { if v == 0x81 { print!("{}", self.sb as char) } }
             0xFF04 => self.timer.set_div(v),
@@ -75,7 +83,7 @@ impl MMU {
             // 0xFF51..=0xFF55 => {} // DMA CGB
             0xFF68..=0xFF6B => self.ppu.write(addr, v),
             0xFFFF => self.inte = v,
-            _ => { println!("Warning: MMU: Attempt to WRITE on unmapped IO area: 0x{:04X}", addr); }
+            _ => { println!("Warning: Attempt to WRITE on unmapped IO area: 0x{:04X}", addr); }
         }
     }
 

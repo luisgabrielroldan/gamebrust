@@ -1,4 +1,5 @@
 pub mod timer;
+pub mod joypad;
 
 #[allow(dead_code)]
 pub enum Flag {
