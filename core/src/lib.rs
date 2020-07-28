@@ -3,24 +3,27 @@ mod cpu;
 #[allow(dead_code)]
 mod io;
 #[allow(dead_code)]
+pub mod cartridge;
+#[allow(dead_code)]
 mod memory;
 #[allow(dead_code)]
 mod ppu;
 
 use cpu::CPU;
 use memory::MMU;
+use cartridge::Cartridge;
 
-struct System {
+pub struct System {
     cpu: CPU,
     mmu: MMU,
 }
 
 #[allow(dead_code)]
 impl System {
-    pub fn new() -> Self {
+    pub fn new(cartridge: Cartridge) -> Self {
         Self {
             cpu: CPU::new(),
-            mmu: MMU::new(),
+            mmu: MMU::new(cartridge),
         }
     }
 
@@ -36,6 +39,12 @@ mod tests {
 
     #[test]
     fn create_system() {
-        System::new();
+        let cartridge =
+            match Cartridge::from_path("../roms/tetris.gb") {
+                Ok(cartridge) => cartridge,
+                _ => panic!("Error!"),
+            };
+
+        System::new(cartridge);
     }
 }

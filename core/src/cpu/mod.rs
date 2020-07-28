@@ -718,21 +718,21 @@ impl CPU {
 
     fn imm_u8(&mut self, mem: &dyn Memory) -> u8 {
         let v = mem.r8(self.reg.pc);
-        self.reg.pc += 1;
+        self.reg.pc = self.reg.pc.wrapping_add(1);
 
         v
     }
 
     fn imm_i8(&mut self, mem: &dyn Memory) -> i8 {
         let v = mem.r8(self.reg.pc);
-        self.reg.pc += 1;
+        self.reg.pc = self.reg.pc.wrapping_add(1);
 
         v as i8
     }
 
     fn imm_u16(&mut self, mem: &dyn Memory) -> u16 {
         let v = mem.r16(self.reg.pc);
-        self.reg.pc += 2;
+        self.reg.pc = self.reg.pc.wrapping_add(2);
 
         v
     }

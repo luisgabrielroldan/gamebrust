@@ -1,17 +1,23 @@
 use crate::io::timer::Timer;
 use crate::memory::Memory;
+use crate::cartridge::Cartridge;
+use crate::ppu::PPU;
 
 pub struct MMU {
     intf: u8,
+    cartridge: Cartridge,
     timer: Timer,
+    ppu: PPU
 }
 
 #[allow(dead_code)]
 impl MMU {
-    pub fn new() -> Self {
+    pub fn new(cartridge: Cartridge) -> Self {
         Self {
             intf: 0,
+            cartridge: cartridge,
             timer: Timer::new(),
+            ppu: PPU::new(),
         }
     }
 
