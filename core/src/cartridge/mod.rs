@@ -40,8 +40,8 @@ impl Cartridge {
 }
 
 impl Memory for Cartridge {
-    fn r8(&self, addr: u16) -> u8 { self.mbc.r8(addr) }
-    fn w8(&mut self, addr: u16, v: u8) { self.mbc.w8(addr, v); }
+    fn read(&self, addr: u16) -> u8 { self.mbc.read(addr) }
+    fn write(&mut self, addr: u16, v: u8) { self.mbc.write(addr, v); }
 }
 
 

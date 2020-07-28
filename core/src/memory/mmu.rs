@@ -55,10 +55,10 @@ impl MMU {
             }
             0xFF0F => self.intf,
             0xFF10..=0xFF3F => 0, // TODO: Implement sound someday...
-            0xFF40..=0xFF4F => self.ppu.r8(addr),
+            0xFF40..=0xFF4F => self.ppu.read(addr),
             0xFF50 => { if self.bootrom { 1 } else { 0 } }
             // 0xFF51..=0xFF55 => 0, // TODO DMA 
-            0xFF68..=0xFF6B => self.ppu.r8(addr),
+            0xFF68..=0xFF6B => self.ppu.read(addr),
             0xFFFF => self.inte,
             _ => { println!("Warning: MMU: Attempt to READ from unmapped IO area: 0x{:04X}", addr); 0xFF }
         }
@@ -87,10 +87,10 @@ impl MMU {
             }
             0xFF10..=0xFF3F => {} // TODO: Implement sound someday...
             // 0xFF46 => self.oam_dma(v),
-            0xFF40..=0xFF4F => self.ppu.w8(addr, v),
+            0xFF40..=0xFF4F => self.ppu.write(addr, v),
             0xFF50 => { if (v & 1) == 1 { self.bootrom = false } }
             // 0xFF51..=0xFF55 => {} // DMA CGB
-            0xFF68..=0xFF6B => self.ppu.w8(addr, v),
+            0xFF68..=0xFF6B => self.ppu.write(addr, v),
             0xFFFF => self.inte = v,
             _ => { println!("Warning: MMU: Attempt to WRITE on unmapped IO area: 0x{:04X}", addr); }
         }
@@ -99,39 +99,39 @@ impl MMU {
 }
 
 impl Memory for MMU {
-    fn r8(&self, addr: u16) -> u8 {
+    fn read(&self, addr: u16) -> u8 {
         match addr {
             0x000..=0x7FFF => {
                 if self.bootrom && addr < 0x100 {
                     DMG1[addr as usize]
                 } else {
-                    self.cartridge.r8(addr)
+                    self.cartridge.read(addr)
                 }
             }
-            0x8000..=0x9FFF => self.ppu.r8(addr),
-            0xA000..=0xBFFF => self.cartridge.r8(addr),
-            0xC000..=0xCFFF | 0xE000..=0xEFFF => self.wram.r8(addr & 0x0FFF),
-            0xD000..=0xDFFF | 0xF000..=0xFDFF => self.wram.r8(0x1000 | (addr & 0x0FFF)),
+            0x8000..=0x9FFF => self.ppu.read(addr),
+            0xA000..=0xBFFF => self.cartridge.read(addr),
+            0xC000..=0xCFFF | 0xE000..=0xEFFF => self.wram.read(addr & 0x0FFF),
+            0xD000..=0xDFFF | 0xF000..=0xFDFF => self.wram.read(0x1000 | (addr & 0x0FFF)),
 
-            0xFE00..=0xFE9F => self.ppu.r8(addr),
+            0xFE00..=0xFE9F => self.ppu.read(addr),
             0xFF00..=0xFF7F => self.io_read(addr),
-            0xFF80..=0xFFFE => self.zram.r8(addr - 0xFF80),
+            0xFF80..=0xFFFE => self.zram.read(addr - 0xFF80),
             0xFFFF => self.io_read(addr),
             _ => { println!("Warning: MMU: Attempt to READ from unmapped area: 0x{:04X}", addr); 0xFF }
         }
     }
 
-    fn w8(&mut self, addr: u16, v: u8) {
+    fn write(&mut self, addr: u16, v: u8) {
         match addr {
-            0x000..=0x7FFF => self.cartridge.w8(addr, v),
-            0x8000..=0x9FFF => self.ppu.w8(addr, v),
-            0xA000..=0xBFFF => self.cartridge.w8(addr, v),
-            0xC000..=0xCFFF | 0xE000..=0xEFFF => self.wram.w8(addr & 0x0FFF, v),
-            0xD000..=0xDFFF | 0xF000..=0xFDFF => self.wram.w8(0x1000 | (addr & 0x0FFF), v),
-            0xFE00..=0xFE9F => self.ppu.w8(addr, v),
+            0x000..=0x7FFF => self.cartridge.write(addr, v),
+            0x8000..=0x9FFF => self.ppu.write(addr, v),
+            0xA000..=0xBFFF => self.cartridge.write(addr, v),
+            0xC000..=0xCFFF | 0xE000..=0xEFFF => self.wram.write(addr & 0x0FFF, v),
+            0xD000..=0xDFFF | 0xF000..=0xFDFF => self.wram.write(0x1000 | (addr & 0x0FFF), v),
+            0xFE00..=0xFE9F => self.ppu.write(addr, v),
             0xFF00..=0xFF7F => self.io_write(addr, v),
 
-            0xFF80..=0xFFFE => self.zram.w8(addr - 0xFF80, v),
+            0xFF80..=0xFFFE => self.zram.write(addr - 0xFF80, v),
             0xFFFF => self.io_write(addr, v),
             _ => { println!("Warning: MMU: Attempt to WRITE on unmapped area: 0x{:04X}", addr); }
         };

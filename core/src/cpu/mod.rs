@@ -82,7 +82,7 @@ impl CPU {
             // ADC A, (HL)
             ADC(Reg8(A), Mem(HL)) => {
                 let a = self.reg.get_r16(HL);
-                let v = mem.r8(a);
+                let v = mem.read(a);
                 alu::add(self, v, true);
                 2
             }
@@ -101,7 +101,7 @@ impl CPU {
             // ADD A, (HL)
             ADD(Reg8(A), Mem(HL)) => {
                 let a = self.reg.get_r16(HL);
-                let v = mem.r8(a);
+                let v = mem.read(a);
                 alu::add(self, v, false);
                 2
             }
@@ -120,7 +120,7 @@ impl CPU {
             // ADC A, (HL)
             AND(Reg8(A), Mem(HL)) => {
                 let a = self.reg.get_r16(HL);
-                let v = mem.r8(a);
+                let v = mem.read(a);
                 alu::and(self, v);
                 2
             }
@@ -139,7 +139,7 @@ impl CPU {
             // CP A, (HL)
             CP(Reg8(A), Mem(HL)) => {
                 let a = self.reg.get_r16(HL);
-                let v = mem.r8(a);
+                let v = mem.read(a);
                 alu::cp(self, v);
                 2
             }
@@ -159,8 +159,8 @@ impl CPU {
             // DEC r8
             DEC(Mem(HL)) => {
                 let a = self.reg.get_r16(HL);
-                let v = alu::dec(self, mem.r8(a));
-                mem.w8(a, v);
+                let v = alu::dec(self, mem.read(a));
+                mem.write(a, v);
                 3
             }
             // INC r8
@@ -173,8 +173,8 @@ impl CPU {
             // INC r8
             INC(Mem(HL)) => {
                 let a = self.reg.get_r16(HL);
-                let v = alu::inc(self, mem.r8(a));
-                mem.w8(a, v);
+                let v = alu::inc(self, mem.read(a));
+                mem.write(a, v);
                 3
             }
             // OR A, r8
@@ -192,7 +192,7 @@ impl CPU {
             // OR A, (HL)
             OR(Reg8(A), Mem(HL)) => {
                 let a = self.reg.get_r16(HL);
-                let v = mem.r8(a);
+                let v = mem.read(a);
                 alu::or(self, v);
                 2
             }
@@ -211,7 +211,7 @@ impl CPU {
             // SBC A, (HL)
             SBC(Reg8(A), Mem(HL)) => {
                 let a = self.reg.get_r16(HL);
-                let v = mem.r8(a);
+                let v = mem.read(a);
                 alu::sub(self, v, true);
                 2
             }
@@ -230,7 +230,7 @@ impl CPU {
             // SUB A, (HL)
             SUB(Reg8(A), Mem(HL)) => {
                 let a = self.reg.get_r16(HL);
-                let v = mem.r8(a);
+                let v = mem.read(a);
                 alu::sub(self, v, false);
                 2
             }
@@ -249,7 +249,7 @@ impl CPU {
             // OR A, (HL)
             XOR(Reg8(A), Mem(HL)) => {
                 let a = self.reg.get_r16(HL);
-                let v = mem.r8(a);
+                let v = mem.read(a);
                 alu::xor(self, v);
                 2
             }
@@ -288,7 +288,7 @@ impl CPU {
             // BIT u3, (HL)
             BIT(bit, Mem(HL)) => {
                 let a = self.reg.get_r16(HL);
-                alu::bit(self, mem.r8(a), bit);
+                alu::bit(self, mem.read(a), bit);
                 3
             }
             // RES u3, r8
@@ -301,8 +301,8 @@ impl CPU {
             // RES u3, (HL)
             RES(bit, Mem(HL)) => {
                 let a = self.reg.get_r16(HL);
-                let v = alu::res(self, mem.r8(a), bit);
-                mem.w8(a, v);
+                let v = alu::res(self, mem.read(a), bit);
+                mem.write(a, v);
                 3
             }
             // SET u3, r8
@@ -315,8 +315,8 @@ impl CPU {
             // SET u3, (HL)
             SET(bit, Mem(HL)) => {
                 let a = self.reg.get_r16(HL);
-                let v = alu::set(self, mem.r8(a), bit);
-                mem.w8(a, v);
+                let v = alu::set(self, mem.read(a), bit);
+                mem.write(a, v);
                 3
             }
             // SWAP r8
@@ -329,8 +329,8 @@ impl CPU {
             // SWAP u3, (HL)
             SWAP(Mem(HL)) => {
                 let a = self.reg.get_r16(HL);
-                let v = alu::swap(self, mem.r8(a));
-                mem.w8(a, v);
+                let v = alu::swap(self, mem.read(a));
+                mem.write(a, v);
                 4
             }
             /*==========================*\
@@ -346,8 +346,8 @@ impl CPU {
             // RL u3, (HL)
             RL(Mem(HL)) => {
                 let a = self.reg.get_r16(HL);
-                let v = alu::rl(self, mem.r8(a));
-                mem.w8(a, v);
+                let v = alu::rl(self, mem.read(a));
+                mem.write(a, v);
                 4
             }
             // RLA
@@ -367,8 +367,8 @@ impl CPU {
             // RLC u3, (HL)
             RLC(Mem(HL)) => {
                 let a = self.reg.get_r16(HL);
-                let v = alu::rlc(self, mem.r8(a));
-                mem.w8(a, v);
+                let v = alu::rlc(self, mem.read(a));
+                mem.write(a, v);
                 4
             }
             // RLCA
@@ -388,8 +388,8 @@ impl CPU {
             // RR u3, (HL)
             RR(Mem(HL)) => {
                 let a = self.reg.get_r16(HL);
-                let v = alu::rr(self, mem.r8(a));
-                mem.w8(a, v);
+                let v = alu::rr(self, mem.read(a));
+                mem.write(a, v);
                 4
             }
             // RRA
@@ -409,8 +409,8 @@ impl CPU {
             // RRC u3, (HL)
             RRC(Mem(HL)) => {
                 let a = self.reg.get_r16(HL);
-                let v = alu::rrc(self, mem.r8(a));
-                mem.w8(a, v);
+                let v = alu::rrc(self, mem.read(a));
+                mem.write(a, v);
                 4
             }
             // RRCA
@@ -430,8 +430,8 @@ impl CPU {
             // SLA (HL)
             SLA(Mem(HL)) => {
                 let a = self.reg.get_r16(HL);
-                let v = alu::sla(self, mem.r8(a));
-                mem.w8(a, v);
+                let v = alu::sla(self, mem.read(a));
+                mem.write(a, v);
                 4
             }
             // SRA r8
@@ -444,8 +444,8 @@ impl CPU {
             // SRA (HL)
             SRA(Mem(HL)) => {
                 let a = self.reg.get_r16(HL);
-                let v = alu::sra(self, mem.r8(a));
-                mem.w8(a, v);
+                let v = alu::sra(self, mem.read(a));
+                mem.write(a, v);
                 4
             }
             // SRL r8
@@ -458,8 +458,8 @@ impl CPU {
             // SR: (HL)
             SRL(Mem(HL)) => {
                 let a = self.reg.get_r16(HL);
-                let v = alu::srl(self, mem.r8(a));
-                mem.w8(a, v);
+                let v = alu::srl(self, mem.read(a));
+                mem.write(a, v);
                 4
             }
             /*==========================*\
@@ -481,13 +481,13 @@ impl CPU {
             LD(Mem(ar), Reg8(sr)) => {
                 let a = self.reg.get_r16(ar);
                 let v = self.reg.get_r8(sr);
-                mem.w8(a, v);
+                mem.write(a, v);
                 2
             }
             // LD r8, (r16)
             LD(Reg8(dr), Mem(ar)) => {
                 let a = self.reg.get_r16(ar);
-                let v = mem.r8(a);
+                let v = mem.read(a);
                 self.reg.set_r8(dr, v);
                 2
             }
@@ -500,65 +500,65 @@ impl CPU {
             // LD A, (u16)
             LD(Reg8(A), MemImmU16) => {
                 let a = self.imm_u16(mem);
-                let v = mem.r8(a);
+                let v = mem.read(a);
                 self.reg.a = v;
                 4
             }
             // LD (u16), A
             LD(MemImmU16, Reg8(A)) => {
                 let a = self.imm_u16(mem);
-                mem.w8(a, self.reg.a);
+                mem.write(a, self.reg.a);
                 4
             }
             // LD A, (0xFF00+u8)
             LD(Reg8(A), ZMemImmU8) => {
                 let a = self.imm_u8(mem) as u16 | 0xFF00;
-                self.reg.a = mem.r8(a);
+                self.reg.a = mem.read(a);
                 3
             }
             // LD (0xFF00+u8), A
             LD(ZMemImmU8, Reg8(A)) => {
                 let a = self.imm_u8(mem) as u16 | 0xFF00;
-                mem.w8(a, self.reg.a);
+                mem.write(a, self.reg.a);
                 3
             }
             // LD A, (0xFF00+C)
             LD(Reg8(A), ZMem(C)) => {
                 let a = self.reg.c as u16 | 0xFF00;
-                self.reg.a = mem.r8(a);
+                self.reg.a = mem.read(a);
                 3
             }
             // LD (0xFF00+C), A
             LD(ZMem(C), Reg8(A)) => {
                 let a = self.reg.c as u16 | 0xFF00;
-                mem.w8(a, self.reg.a);
+                mem.write(a, self.reg.a);
                 3
             }
             // LDD A, (HL)
             LDD(Reg8(A), Mem(HL)) => {
                 let addr = self.reg.get_r16(HL);
-                self.reg.a = mem.r8(addr);
+                self.reg.a = mem.read(addr);
                 self.reg.set_r16(HL, addr.wrapping_sub(1));
                 2
             }
             // LDD A, (HL)
             LDD(Mem(HL), Reg8(A)) => {
                 let addr = self.reg.get_r16(HL);
-                mem.w8(addr, self.reg.a);
+                mem.write(addr, self.reg.a);
                 self.reg.set_r16(HL, addr.wrapping_sub(1));
                 2
             }
             // LDI A, (HL)
             LDI(Reg8(A), Mem(HL)) => {
                 let addr = self.reg.get_r16(HL);
-                self.reg.a = mem.r8(addr);
+                self.reg.a = mem.read(addr);
                 self.reg.set_r16(HL, addr.wrapping_add(1));
                 2
             }
             // LDI A, (HL)
             LDI(Mem(HL), Reg8(A)) => {
                 let addr = self.reg.get_r16(HL);
-                mem.w8(addr, self.reg.a);
+                mem.write(addr, self.reg.a);
                 self.reg.set_r16(HL, addr.wrapping_add(1));
                 2
             }
@@ -655,7 +655,7 @@ impl CPU {
             // LD (u16), SP
             LD(MemImmU16, Reg16(SP)) => {
                 let a = self.imm_u16(mem);
-                mem.w16(a, self.reg.get_r16(SP));
+                mem.write_word(a, self.reg.get_r16(SP));
                 5
             }
             // LD HL, SP+i8
@@ -732,21 +732,21 @@ impl CPU {
     }
 
     fn imm_u8(&mut self, mem: &dyn Memory) -> u8 {
-        let v = mem.r8(self.reg.pc);
+        let v = mem.read(self.reg.pc);
         self.reg.pc = self.reg.pc.wrapping_add(1);
 
         v
     }
 
     fn imm_i8(&mut self, mem: &dyn Memory) -> i8 {
-        let v = mem.r8(self.reg.pc);
+        let v = mem.read(self.reg.pc);
         self.reg.pc = self.reg.pc.wrapping_add(1);
 
         v as i8
     }
 
     fn imm_u16(&mut self, mem: &dyn Memory) -> u16 {
-        let v = mem.r16(self.reg.pc);
+        let v = mem.read_word(self.reg.pc);
         self.reg.pc = self.reg.pc.wrapping_add(2);
 
         v
@@ -754,11 +754,11 @@ impl CPU {
 
     fn stack_push(&mut self, mem: &mut dyn Memory, v: u16) {
         self.reg.sp = self.reg.sp.wrapping_sub(2);
-        mem.w16(self.reg.sp, v);
+        mem.write_word(self.reg.sp, v);
     }
 
     fn stack_pop(&mut self, mem: &mut dyn Memory) -> u16 {
-        let v = mem.r16(self.reg.sp);
+        let v = mem.read_word(self.reg.sp);
         self.reg.sp = self.reg.sp.wrapping_add(2);
         v
     }

@@ -12,6 +12,6 @@ impl PPU {
 }
 
 impl Memory for PPU {
-    fn r8(&self, _a: u16) -> u8 { 0xFF }
-    fn w8(&mut self, _addr: u16, _v: u8) { }
+    fn read(&self, _a: u16) -> u8 { 0xFF }
+    fn write(&mut self, _addr: u16, _v: u8) { }
 }

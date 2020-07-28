@@ -23,7 +23,7 @@ fn ld_instrs() {
         cpu.reg.set_r16(R16::HL, 0x0101);
 
         for i in 0..8 {
-            mem.w8(i as u16, INSTRS[t][i]);
+            mem.write(i as u16, INSTRS[t][i]);
             cpu.step(&mut mem);
         }
     }
@@ -46,8 +46,8 @@ fn bit_instrs() {
     let mut cpu = CPU::new();
 
     for i in 0..INSTRS.len() / 2 {
-        mem.w8(0x0000, INSTRS[i * 2]);
-        mem.w8(0x0001, INSTRS[i * 2 + 1]);
+        mem.write(0x0000, INSTRS[i * 2]);
+        mem.write(0x0001, INSTRS[i * 2 + 1]);
 
         cpu.reg.set_r16(R16::AF, 0xFF00);
         cpu.reg.set_r16(R16::BC, 0xFFFF);
@@ -88,7 +88,7 @@ fn res_instrs() {
     let mut cpu = CPU::new();
 
     for i in 0..INSTRS.len() {
-        mem.w8(i as u16, INSTRS[i]);
+        mem.write(i as u16, INSTRS[i]);
     }
 
     cpu.reg.set_r16(R16::AF, 0xFFFF);
@@ -126,7 +126,7 @@ fn set_instrs() {
     let mut cpu = CPU::new();
 
     for i in 0..INSTRS.len() {
-        mem.w8(i as u16, INSTRS[i]);
+        mem.write(i as u16, INSTRS[i]);
     }
 
     cpu.reg.set_r16(R16::AF, 0);

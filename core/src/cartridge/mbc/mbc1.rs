@@ -43,7 +43,7 @@ impl MBC1 {
 }
 
 impl Memory for MBC1 {
-    fn r8(&self, addr: u16) -> u8 {
+    fn read(&self, addr: u16) -> u8 {
         match addr {
             // 0000-3FFF - ROM Bank 00/20/40/60
             0x0000..=0x3FFF => self.rom[addr as usize],
@@ -66,7 +66,7 @@ impl Memory for MBC1 {
         }
     }
 
-    fn w8(&mut self, addr: u16, v: u8) {
+    fn write(&mut self, addr: u16, v: u8) {
         match addr {
             // A000-BFFF - RAM Bank 00-03, if any
             0xA000..=0xBFFF => {

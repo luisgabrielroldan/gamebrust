@@ -12,9 +12,9 @@ impl RomOnly {
 }
 
 impl Memory for RomOnly {
-    fn r8(&self, a: u16) -> u8 {
+    fn read(&self, a: u16) -> u8 {
         self.rom[a as usize]
     }
 
-    fn w8(&mut self, _addr: u16, _v: u8) { }
+    fn write(&mut self, _addr: u16, _v: u8) { }
 }
