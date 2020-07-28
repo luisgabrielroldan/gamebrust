@@ -1,4 +1,5 @@
 mod mmu;
+mod bootrom;
 
 pub use mmu::MMU;
 

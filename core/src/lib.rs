@@ -20,10 +20,16 @@ pub struct System {
 
 #[allow(dead_code)]
 impl System {
-    pub fn new(cartridge: Cartridge) -> Self {
+    pub fn new(cartridge: Cartridge, bootroom: bool) -> Self {
+        let cpu = 
+            match bootroom {
+                true => CPU::new(),
+                false => CPU::armed(),
+            };
+
         Self {
-            cpu: CPU::new(),
-            mmu: MMU::new(cartridge),
+            cpu: cpu,
+            mmu: MMU::new(cartridge, bootroom),
         }
     }
 

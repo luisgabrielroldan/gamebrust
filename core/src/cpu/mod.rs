@@ -9,6 +9,7 @@ mod tests;
 use self::opcodes::*;
 use super::memory::Memory;
 use registers::Registers;
+use registers::R16;
 
 pub struct CPU {
     reg: Registers,
@@ -20,11 +21,23 @@ pub struct CPU {
 impl CPU {
     pub fn new() -> Self {
         Self {
-            reg: Registers::new(),
+            reg: Registers:: new(),
             halted: false,
             ime: false,
             ime_next: false,
         }
+    }
+
+    pub fn armed() -> Self {
+        let mut cpu = CPU::new();
+        cpu.reg.set_r16(R16::AF, 0x01B0);
+        cpu.reg.set_r16(R16::BC, 0x0013);
+        cpu.reg.set_r16(R16::DE, 0x00D8);
+        cpu.reg.set_r16(R16::HL, 0x014D);
+        cpu.reg.pc = 0x100;
+        cpu.reg.sp = 0xFFFE;
+
+        return cpu;
     }
 
     pub fn step(&mut self, mem: &mut dyn Memory) -> u32 {
@@ -44,6 +57,8 @@ impl CPU {
         use Opcode::*;
         use Oper::*;
 
+        let instr_addr = self.reg.pc;
+
         let opcode = self.imm_u8(mem);
 
         let opcode = match decoder::decode(opcode) {
@@ -52,7 +67,7 @@ impl CPU {
             None => panic!("Unknown opcode 0x{:02X}!", opcode),
         };
 
-        // println!("{:?}", opcode);
+        // println!("{:04X}\t\t{:?}", instr_addr, opcode);
 
         let cycles = match opcode {
             /*==============================*\
