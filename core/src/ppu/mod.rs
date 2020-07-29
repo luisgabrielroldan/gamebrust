@@ -2,6 +2,7 @@ pub mod sprite;
 use crate::memory::{Memory, Ram};
 use crate::io;
 use crate::Display;
+use sprite::Sprite;
 
 const SCREEN_W: u16 = 160;
 const SCREEN_H: u16 = 144;
@@ -60,7 +61,7 @@ impl PPU {
         Self {
             clock: 0,
             display: display,
-            framebuffer: vec![0xFFFFFF; (SCREEN_W * SCREEN_H) as usize],
+            framebuffer: vec![0xCADC9F; (SCREEN_W * SCREEN_H) as usize],
             vram: Ram::new(VRAM_SIZE),
             voam: Ram::new(VOAM_SIZE),
             mode: Mode::HBlank,
@@ -143,6 +144,143 @@ impl PPU {
         intfs
     }
 
+    fn render_line(&mut self) {
+        if self.ly >= SCREEN_H as u8 {
+            return;
+        }
+
+        let sprites = self.oam_search();
+
+        let win_y = self.ly as i32 - self.wy as i32;
+
+        for x in 0..SCREEN_W as u8 {
+            let mut color = 0xFFFFFF;
+
+            let bg_y = self.scy.wrapping_add(self.ly);
+            let bg_x = self.scx.wrapping_add(x as u8);
+
+            let win_x = - ((self.wx as i32) - 7) + (x as i32);
+
+            if self.lcdc0 {
+                if self.window_on && win_y >= 0 && win_x >= 0 {
+                    color = self.get_bg_color(bg_x, bg_y, &self.window_map);
+                } else {
+                    color = self.get_bg_color(bg_x, bg_y, &self.background_map);
+                }
+            };
+
+            if self.sprites_enabled {
+                color = self.get_sprite_color(&sprites, x, self.ly, color);
+            }
+
+            self.framebuffer[(self.ly as usize * SCREEN_W as usize + x as usize)] = color;
+        }
+    }
+
+    fn get_bg_color(&self, x: u8, y: u8, map: &TileMap) -> u32 {
+        let bg_map_base = TileMap::base_addr(map);
+        let tile_map_x = (x / 8) as u16;
+        let tile_map_y = (y / 8) as u16;
+        let tile_x = x % 8;
+        let tile_y = y % 8;
+
+        let tile_idx: u8 = self
+            .vram
+            .read(bg_map_base + (tile_map_x + tile_map_y * 32) as u16);
+
+        let color = self.get_tile_color(&self.tile_data, tile_idx, tile_x, tile_y, false);
+
+        self.bgp.to_rgb(color)
+    }
+
+    fn get_tile_color(&self, set: &TileSet, index: u8, x: u8, y: u8, x_flip: bool) -> u8 {
+        let tile_set_base = TileSet::base_addr(&set);
+
+        let tile_offset = (if *set == TileSet::Set1 {
+            index as u16
+        } else {
+            ((index as i8 as i16) + 128) as u16
+        }) * 16;
+
+        let tile_line_addr = tile_set_base + tile_offset + (y * 2) as u16;
+
+        let b = if x_flip { x } else { 7 - x };
+
+        let l = (self.vram.read(tile_line_addr) >> b) & 1;
+        let h = (self.vram.read(tile_line_addr + 1) >> b) & 1;
+
+        h << 1 | l
+    }
+
+    fn oam_search(&self) -> [Option<Sprite>; 10] {
+        let mut res = [None; 10];
+        let mut ri = 0;
+
+        for i in 0..40 {
+            let sprite_offset = i * 4;
+            let spritey = self.voam.read(sprite_offset) as u16 as i32 - 16;
+            let spritex = self.voam.read(sprite_offset + 1) as u16 as i32 - 8;
+            let tile = (self.voam.read(sprite_offset + 2) & (if self.sprite_size == SpriteSize::S8x16 { 0xFE } else { 0xFF }));
+            let flags = self.voam.read(sprite_offset + 3);
+            let line = self.ly as i32;
+            let sprite_size = self.sprite_size as i32;
+
+            if line < spritey || line >= spritey + sprite_size {
+                continue;
+            }
+            if spritex < -7 || spritex >= (SCREEN_W as i32) {
+                continue;
+            }
+
+            let sprite = Sprite::new(spritex, spritey, tile, flags);
+
+            res[ri] = Some(sprite);
+
+            ri += 1;
+
+            if ri == 10 {
+                break;
+            }
+        }
+
+        res
+    }
+
+    fn get_sprite_color(&self, sprites: &[Option<Sprite>; 10], x: u8, y: u8, bg: u32) -> u32 {
+        let mut current_color = bg;
+
+        for i in 0..10 {
+            if let Some(sprite) = &sprites[i] {
+                if x < sprite.x || x > sprite.x + 7 {
+                    continue;
+                }
+                if y < sprite.y || y > sprite.y + (self.sprite_size as u8) {
+                    continue;
+                }
+
+                let tile_y = y - sprite.y;
+                let tile_x = x - sprite.x;
+
+                let palette = if sprite.palette == 0 {
+                    &self.obp0
+                } else {
+                    &self.obp1
+                };
+
+                let color =
+                    self.get_tile_color(&TileSet::Set1, sprite.tile, tile_x, tile_y, sprite.x_flip);
+
+                if color != 0 {
+                    current_color = palette.to_rgb(color);
+                } else {
+                    current_color = bg;
+                }
+            }
+        }
+
+        current_color
+    }
+
     fn change_mode(&mut self, next: Mode) -> u8 {
         let mut intfs = 0;
         self.mode = next;
@@ -150,7 +288,7 @@ impl PPU {
         if match self.mode {
             Mode::OAMSearch => self.oam_inte,
                 Mode::HBlank => {
-                    // self.render_line();
+                    self.render_line();
                     self.hblank_inte
                 }
             Mode::VBlank => {
@@ -230,7 +368,7 @@ impl Memory for PPU {
             0xFF49 => self.obp1.into(),
             0xFF4A => self.wy,
             0xFF4B => self.wx,
-            _ => { println!("Warning: Attempt to READ from unmapped PPU area: 0x{:04X}", addr); 0xFF }
+            _ => { /* println!("Warning: Attempt to READ from unmapped PPU area: 0x{:04X}", addr); */ 0xFF }
         }
     }
 
@@ -249,7 +387,7 @@ impl Memory for PPU {
             0xFF49 => { self.obp1 = Palette::from(v); }
             0xFF4A => self.wy = v,
             0xFF4B => self.wx = v,
-            _ => { println!("Warning: Attempt to WRITE 0x{:02X} on unmapped PPU area: 0x{:04X}", v, addr) }
+            _ => { /* println!("Warning: Attempt to WRITE 0x{:02X} on unmapped PPU area: 0x{:04X}", v, addr) */ }
         };
     }
 }
@@ -265,14 +403,14 @@ enum Mode {
 #[derive(PartialEq, Clone, Copy)]
 enum TileSet {
     Set1, // Map at 0x8000..0x8FFF
-    Set2, // Map at 0x8800..0x97FF
+        Set2, // Map at 0x8800..0x97FF
 }
 
 impl TileSet {
     pub fn base_addr(set: &TileSet) -> u16 {
         match set {
-            TileSet::Set1 => 0x8000,
-            TileSet::Set2 => 0x8800,
+            TileSet::Set1 => 0x0000,
+            TileSet::Set2 => 0x0800,
         }
     }
 }
@@ -280,14 +418,14 @@ impl TileSet {
 #[derive(PartialEq, Clone, Copy)]
 enum TileMap {
     Low,  // Map at 0x9800..0x9BFF
-    High, // Map at 0x9C00..0x9FFF
+        High, // Map at 0x9C00..0x9FFF
 }
 
 impl TileMap {
     pub fn base_addr(set: &TileMap) -> u16 {
         match set {
-            TileMap::Low => 0x9800,
-            TileMap::High => 0x9C00,
+            TileMap::Low => 0x1800,
+            TileMap::High => 0x1C00,
         }
     }
 }
@@ -309,14 +447,13 @@ impl std::convert::From<u8> for Palette {
         let mut render: [u32; 4] = [0; 4];
 
         for i in 0..4 {
-            let gray = match (value >> (i * 2)) & 0x03 {
-                0 => 255,
-                1 => 192,
-                2 => 96,
-                _ => 0,
-            };
-
-            render[i] = (gray << 24) | (gray << 16) | (gray << 8) | gray;
+            render[i] = 
+                match (value >> (i * 2)) & 0x03 {
+                    0 => 0x9BBC0F,
+                    1 => 0x8BAC0F,
+                    2 => 0x306230,
+                    _ => 0x0F380F,
+                };
         }
 
         Self {

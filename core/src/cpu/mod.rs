@@ -110,15 +110,19 @@ impl CPU {
         use Opcode::*;
         use Oper::*;
 
-        // let instr_addr = self.reg.pc;
+        let instr_addr = self.reg.pc;
 
-        let opcode = self.imm_u8(mem);
+        let imm = self.imm_u8(mem);
 
-        let opcode = match decoder::decode(opcode) {
+        // if imm == 0xFF { panic!("{:04X} - {:02X}", instr_addr, imm); }
+
+        let opcode = match decoder::decode(imm) {
             Some(PREFIX) => decoder::decode_prefix(self.imm_u8(mem)),
             Some(opcode) => opcode,
-            None => panic!("Unknown opcode 0x{:02X}!", opcode),
+            None => panic!("Unknown opcode 0x{:02X}!", imm),
         };
+
+        // self.reg.dump();
 
         // println!("{:04X}\t\t{:?}", instr_addr, opcode);
 
@@ -649,14 +653,13 @@ impl CPU {
             }
             // JP (Cond) u16
             JP(Cond::Always, Reg16(HL)) => {
-                let a = self.imm_u16(mem);
-                self.reg.pc = a;
+                self.reg.pc = self.reg.get_r16(HL);
                 4
             }
             // CALL (Cond) u16
             CALL(cond, ImmU16) => {
                 let addr = self.imm_u16(mem);
-                let ret_addr = self.reg.pc + 2;
+                let ret_addr = self.reg.pc;
 
                 if self.check_cond(cond) {
                     self.stack_push(mem, ret_addr);
@@ -689,9 +692,9 @@ impl CPU {
                 self.ime_next = true;
                 4
             }
-            // CALL (Cond) u16
+            // RST u8
             RST(vec) => {
-                let ret_addr = self.reg.pc + 2;
+                let ret_addr = self.reg.pc;
                 self.stack_push(mem, ret_addr);
                 self.reg.pc = vec as u16;
                 4

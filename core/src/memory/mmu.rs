@@ -7,6 +7,28 @@ use crate::cartridge::Cartridge;
 use crate::ppu::PPU;
 use crate::Display;
 
+struct OAMDma {
+    active: bool,
+    from: u16,
+    index: u16,
+}
+
+impl OAMDma {
+    pub fn new() -> Self {
+        Self {
+            active: false,
+            from: 0,
+            index: 0,
+        }
+    }
+
+    pub fn start(&mut self, from: u8) {
+        self.active = true;
+        self.index = 0;
+        self.from = (from as u16) << 8;
+    }
+}
+
 pub struct MMU {
     intfs: u8,
     inte: u8,
@@ -18,6 +40,7 @@ pub struct MMU {
     wram: Ram,
     zram: Ram,
     sb: u8,
+    oam_dma: OAMDma,
 }
 
 #[allow(dead_code)]
@@ -34,10 +57,13 @@ impl MMU {
             wram: Ram::new(0x8000),
             zram: Ram::new(0x7F),
             sb: 0,
+            oam_dma: OAMDma::new(),
         }
     }
 
     pub fn step(&mut self, ticks: u32) {
+        self.handle_oam_dma(ticks);
+
         self.intfs |= self.timer.step(ticks);
         self.intfs |= self.ppu.step(ticks);
         self.intfs |= self.joypad.step();
@@ -45,6 +71,30 @@ impl MMU {
 
     pub fn get_joypad_adapter(&mut self) -> &mut dyn JoypadAdapter {
         &mut self.joypad
+    }
+
+    fn handle_oam_dma(&mut self, ticks: u32) {
+        if !self.oam_dma.active { return; }
+
+        let cycles = (ticks / 4) as u16;
+
+        let count  = 
+            if 0x8F - self.oam_dma.index > cycles {
+                cycles
+            } else {
+                0x8F - self.oam_dma.index
+            };
+
+        for i in 0..count {
+            let v = self.read(self.oam_dma.from + self.oam_dma.index + i);
+            self.write(0xFE00 + self.oam_dma.index + i, v);
+        }
+
+        self.oam_dma.index += count;
+
+        if self.oam_dma.index == 0x8F {
+            self.oam_dma.active = false;
+        }
     }
 
     fn io_read(&self, addr: u16) -> u8 {
@@ -77,7 +127,7 @@ impl MMU {
             0xFF07 => self.timer.set_tac(v),
             0xFF0F => { self.intfs = v; }
             0xFF10..=0xFF3F => {} // TODO: Implement sound someday...
-            // 0xFF46 => self.oam_dma(v),
+            0xFF46 => self.oam_dma.start(v),
             0xFF40..=0xFF4F => self.ppu.write(addr, v),
             0xFF50 => { if (v & 1) == 1 { self.bootrom = false } }
             // 0xFF51..=0xFF55 => {} // DMA CGB

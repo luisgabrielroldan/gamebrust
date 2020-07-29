@@ -144,7 +144,7 @@ impl Registers {
         };
     }
 
-    pub fn get_r16(&mut self, reg: R16) -> u16 {
+    pub fn get_r16(&self, reg: R16) -> u16 {
         match reg {
             R16::SP => (self.sp),
             R16::PC => (self.pc),
@@ -160,6 +160,46 @@ impl Registers {
                 (h as u16) << 8 | (l as u16)
             }
         }
+    }
+
+    pub fn dump(&self) {
+        println!(
+            "A: {:X?}  F: {:X?}  (AF: {:#06X?})",
+            self.a,
+            self.flags.to_u8(),
+            self.get_r16(R16::AF)
+        );
+
+        println!(
+            "B: {:X?}  C: {:X?}  (BC: {:#06X?})",
+            self.b,
+            self.c,
+            self.get_r16(R16::BC)
+        );
+
+        println!(
+            "D: {:X?}  E: {:X?}  (DE: {:#06X?})",
+            self.d,
+            self.e,
+            self.get_r16(R16::DE)
+        );
+
+        println!(
+            "H: {:X?}  L: {:X?}  (HL: {:#06X?})",
+            self.h,
+            self.l,
+            self.get_r16(R16::HL)
+        );
+
+        println!("PC: {:#06X?}  SP: {:#06X?}", self.pc, self.sp);
+
+        let mut flags = String::new();
+        if self.flags.z { flags.push_str("Z"); } else { flags.push_str("-"); }
+        if self.flags.n { flags.push_str("N"); } else { flags.push_str("-"); }
+        if self.flags.h { flags.push_str("H"); } else { flags.push_str("-"); }
+        if self.flags.c { flags.push_str("C"); } else { flags.push_str("-"); }
+
+        println!("F: [----]");
     }
 }
 

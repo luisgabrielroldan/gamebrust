@@ -1,4 +1,4 @@
-// #[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct Sprite {
     pub x: u8,
     pub y: u8,

@@ -1,5 +1,5 @@
 mod cpu;
-mod io;
+pub mod io;
 pub mod cartridge;
 mod memory;
 mod ppu;
