@@ -73,6 +73,14 @@ impl MMU {
         &mut self.joypad
     }
 
+      fn fast_oam_dma(&mut self, value: u8) {
+        let base = (value as u16) << 8;
+        for i in 0 .. 0xA0 {
+            let b = self.read(base + i);
+            self.write(0xFE00 + i, b);
+        }
+    }
+
     fn handle_oam_dma(&mut self, ticks: u32) {
         if !self.oam_dma.active { return; }
 
@@ -127,7 +135,7 @@ impl MMU {
             0xFF07 => self.timer.set_tac(v),
             0xFF0F => { self.intfs = v; }
             0xFF10..=0xFF3F => {} // TODO: Implement sound someday...
-            0xFF46 => self.oam_dma.start(v),
+            0xFF46 => { self.fast_oam_dma(v); } //self.oam_dma.start(v),
             0xFF40..=0xFF4F => self.ppu.write(addr, v),
             0xFF50 => { if (v & 1) == 1 { self.bootrom = false } }
             // 0xFF51..=0xFF55 => {} // DMA CGB

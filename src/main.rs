@@ -7,8 +7,10 @@ use core::cartridge::Cartridge;
 use core::io::joypad::JoypadKey;
 use core::Display;
 use core::System;
+use std::time::Instant;
 
 struct UI {
+    last_update: Instant,
     frame: u32,
     w: usize,
     h: usize,
@@ -36,6 +38,7 @@ impl UI {
 
         (
             Self {
+                last_update: Instant::now(),
                 w: w,
                 h: h,
                 window: window,
@@ -48,8 +51,11 @@ impl UI {
 
 impl Display for UI {
     fn update(&mut self, buffer: &Vec<u32>) {
-        if self.frame % 2 > 0 {
+        // print!("Updates each {}ms        \r", self.last_update.elapsed().as_millis());
+        self.last_update = Instant::now();
+        if self.frame < 1 {
             self.frame += 1;
+            return;
         }
 
         self.window
@@ -64,14 +70,14 @@ impl Display for UI {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cartridge =
         // match Cartridge::from_path("roms/gb-test-roms/cpu_instrs/individual/08-misc instrs.gb") {
-        match Cartridge::from_path("roms/galaga.gb") {
+        match Cartridge::from_path("roms/mario.gb") {
             Ok(cartridge) => cartridge,
             _ => panic!("Error!"),
         };
 
     let (display, window_rc) = UI::new(160, 144);
 
-    let mut system = System::new(cartridge, Box::new(display), true);
+    let mut system = System::new(cartridge, Box::new(display), false);
 
     let keys = vec![
         (Key::Right, JoypadKey::Right),

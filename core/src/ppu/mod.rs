@@ -15,7 +15,7 @@ pub struct PPU {
     framebuffer: Vec<u32>,
     display: Box<dyn Display>,
     vram: Ram,
-    voam: Ram,
+    voam: [u8; VOAM_SIZE],
 
     // The LY indicates the vertical line to which the present data is
     // transferred to the LCD Driver. The LY can take on any value between 0
@@ -63,7 +63,7 @@ impl PPU {
             display: display,
             framebuffer: vec![0xCADC9F; (SCREEN_W * SCREEN_H) as usize],
             vram: Ram::new(VRAM_SIZE),
-            voam: Ram::new(VOAM_SIZE),
+            voam: [0; VOAM_SIZE],
             mode: Mode::HBlank,
             lcdc0: true,
             ly: 0,
@@ -149,7 +149,7 @@ impl PPU {
             return;
         }
 
-        let sprites = self.oam_search();
+        let sprites = if self.sprites_enabled { self.oam_search() } else { vec![] };
 
         let win_y = self.ly as i32 - self.wy as i32;
 
@@ -179,14 +179,14 @@ impl PPU {
 
     fn get_bg_color(&self, x: u8, y: u8, map: &TileMap) -> u32 {
         let bg_map_base = TileMap::base_addr(map);
-        let tile_map_x = (x / 8) as u16;
-        let tile_map_y = (y / 8) as u16;
+        let tile_map_x = (x >> 3) as u16;
+        let tile_map_y = (y >> 3) as u16;
         let tile_x = x % 8;
         let tile_y = y % 8;
 
         let tile_idx: u8 = self
             .vram
-            .read(bg_map_base + (tile_map_x + tile_map_y * 32) as u16);
+            .read(bg_map_base + (tile_map_x + (tile_map_y << 5)) as u16);
 
         let color = self.get_tile_color(&self.tile_data, tile_idx, tile_x, tile_y, false);
 
@@ -212,16 +212,16 @@ impl PPU {
         h << 1 | l
     }
 
-    fn oam_search(&self) -> [Option<Sprite>; 10] {
-        let mut res = [None; 10];
+    fn oam_search(&self) -> Vec<Sprite> {
+        let mut res = Vec::with_capacity(10);
         let mut ri = 0;
 
         for i in 0..40 {
             let sprite_offset = i * 4;
-            let spritey = self.voam.read(sprite_offset) as u16 as i32 - 16;
-            let spritex = self.voam.read(sprite_offset + 1) as u16 as i32 - 8;
-            let tile = (self.voam.read(sprite_offset + 2) & (if self.sprite_size == SpriteSize::S8x16 { 0xFE } else { 0xFF }));
-            let flags = self.voam.read(sprite_offset + 3);
+            let spritey = self.voam[sprite_offset as usize] as u16 as i32 - 16;
+            let spritex = self.voam[sprite_offset as usize + 1] as u16 as i32 - 8;
+            let tile = (self.voam[sprite_offset as usize + 2] & (if self.sprite_size == SpriteSize::S8x16 { 0xFE } else { 0xFF }));
+            let flags = self.voam[sprite_offset as usize + 3];
             let line = self.ly as i32;
             let sprite_size = self.sprite_size as i32;
 
@@ -234,7 +234,7 @@ impl PPU {
 
             let sprite = Sprite::new(spritex, spritey, tile, flags);
 
-            res[ri] = Some(sprite);
+            res.push(sprite);
 
             ri += 1;
 
@@ -246,35 +246,35 @@ impl PPU {
         res
     }
 
-    fn get_sprite_color(&self, sprites: &[Option<Sprite>; 10], x: u8, y: u8, bg: u32) -> u32 {
+    fn get_sprite_color(&self, sprites: &Vec<Sprite>, x: u8, y: u8, bg: u32) -> u32 {
         let mut current_color = bg;
 
-        for i in 0..10 {
-            if let Some(sprite) = &sprites[i] {
-                if x < sprite.x || x > sprite.x + 7 {
-                    continue;
-                }
-                if y < sprite.y || y > sprite.y + (self.sprite_size as u8) {
-                    continue;
-                }
+        for i in 0..sprites.len() {
+            let sprite = &sprites[i] ;
 
-                let tile_y = y - sprite.y;
-                let tile_x = x - sprite.x;
+            if x < sprite.x || x > sprite.x + 7 {
+                continue;
+            }
+            if y < sprite.y || y > sprite.y + (self.sprite_size as u8) {
+                continue;
+            }
 
-                let palette = if sprite.palette == 0 {
-                    &self.obp0
-                } else {
-                    &self.obp1
-                };
+            let tile_y = y - sprite.y;
+            let tile_x = x - sprite.x;
 
-                let color =
-                    self.get_tile_color(&TileSet::Set1, sprite.tile, tile_x, tile_y, sprite.x_flip);
+            let palette = if sprite.palette == 0 {
+                &self.obp0
+            } else {
+                &self.obp1
+            };
 
-                if color != 0 {
-                    current_color = palette.to_rgb(color);
-                } else {
-                    current_color = bg;
-                }
+            let color =
+                self.get_tile_color(&TileSet::Set1, sprite.tile, tile_x, tile_y, sprite.x_flip);
+
+            if color != 0 {
+                current_color = palette.to_rgb(color);
+            } else {
+                current_color = bg;
             }
         }
 
@@ -356,7 +356,7 @@ impl Memory for PPU {
     fn read(&self, addr: u16) -> u8 {
         match addr {
             0x8000..=0x9FFF => self.vram.read(addr - 0x8000),
-            0xFE00 ..= 0xFE9F => self.voam.read(addr - 0xFE00),
+            0xFE00 ..= 0xFE9F => self.voam[addr as usize - 0xFE00],
             0xFF40 => self.get_lcdc(),
             0xFF41 => self.get_stat(),
             0xFF42 => self.scy,
@@ -375,7 +375,7 @@ impl Memory for PPU {
     fn write(&mut self, addr: u16, v: u8) {
         match addr {
             0x8000..=0x9FFF => self.vram.write(addr - 0x8000, v),
-            0xFE00 ..= 0xFE9F => self.voam.write(addr - 0xFE00, v),
+            0xFE00 ..= 0xFE9F => { self.voam[(addr - 0xFE00) as usize] = v },
             0xFF40 => self.set_lcdc(v),
             0xFF41 => self.set_stat(v),
             0xFF42 => self.scy = v,
@@ -403,7 +403,7 @@ enum Mode {
 #[derive(PartialEq, Clone, Copy)]
 enum TileSet {
     Set1, // Map at 0x8000..0x8FFF
-        Set2, // Map at 0x8800..0x97FF
+    Set2, // Map at 0x8800..0x97FF
 }
 
 impl TileSet {
