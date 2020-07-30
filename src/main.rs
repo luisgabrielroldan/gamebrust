@@ -51,12 +51,10 @@ impl UI {
 
 impl Display for UI {
     fn update(&mut self, buffer: &Vec<u32>) {
-        // print!("Updates each {}ms        \r", self.last_update.elapsed().as_millis());
+        let fps = 1000 / self.last_update.elapsed().as_millis();
+        print!("Updates each {}FPS   \r", fps);
+
         self.last_update = Instant::now();
-        if self.frame < 1 {
-            self.frame += 1;
-            return;
-        }
 
         self.window
             .borrow_mut()
@@ -69,8 +67,9 @@ impl Display for UI {
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cartridge =
-        // match Cartridge::from_path("roms/gb-test-roms/cpu_instrs/individual/08-misc instrs.gb") {
-        match Cartridge::from_path("roms/mario.gb") {
+        // match Cartridge::from_path("roms/gb-test-roms/cpu_instrs/cpu_instrs.gb") {
+        // match Cartridge::from_path("roms/gb-test-roms/cpu_instrs/individual/02-interrupts.gb") {
+        match Cartridge::from_path("roms/pacman.gb") {
             Ok(cartridge) => cartridge,
             _ => panic!("Error!"),
         };

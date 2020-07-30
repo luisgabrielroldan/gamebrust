@@ -10,42 +10,42 @@ pub enum Divider {
 
 #[derive(Debug)]
 pub struct Timer {
-    divider_ref: u32,
+    div_clock: u32,
     div: u8,
-    counter_ref: u32,
-    counter: u8,
-    modulo: u8,
-    step: u32,
+    tma_clock: u32,
+    tima: u8,
+    tma: u8,
+    period: u32,
     enabled: bool,
 }
 
 impl Timer {
     pub fn new() -> Self {
         Self {
-            divider_ref: 0,
+            div_clock: 0,
             div: 0,
-            counter_ref: 0,
-            counter: 0,
-            modulo: 0,
+            tma_clock: 0,
+            tima: 0,
+            tma: 0,
             enabled: true,
-            step: 256,
+            period: 256,
         }
     }
 
     pub fn get_div(&self) -> u8 {
         self.div
     }
-    pub fn get_counter(&self) -> u8 {
-        self.counter
+    pub fn get_tima(&self) -> u8 {
+        self.tima
     }
-    pub fn get_modulo(&self) -> u8 {
-        self.modulo
+    pub fn get_tma(&self) -> u8 {
+        self.tma
     }
     pub fn get_enabled(&self) -> bool {
         self.enabled
     }
     pub fn get_divider(&self) -> Divider {
-        match self.step {
+        match self.period {
             16 => Divider::By16,
             64 => Divider::By64,
             256 => Divider::By256,
@@ -62,61 +62,75 @@ impl Timer {
                 Divider::By64 => 2,
                 Divider::By256 => 3,
             } as u8)
+            | 0xF8
     }
 
     pub fn set_tac(&mut self, v: u8) {
-        self.set_enabled((v & 2) != 0);
-        match v & 3 {
-            0 => self.set_divider(Divider::By1024),
-            1 => self.set_divider(Divider::By16),
-            2 => self.set_divider(Divider::By64),
-            3 => self.set_divider(Divider::By256),
-            _ => {}
-        };
+        self.set_enabled((v & 0x04) != 0);
+
+        let divider =
+            match v & 0x03 {
+                0 => Divider::By1024,
+                1 => Divider::By16,
+                2 => Divider::By64,
+                _ => Divider::By256,
+            } as u32;
+
+        if divider != self.period {
+            // println!("Set TAC: period={:?}, enabled={:?}", divider, self.enabled);
+            self.period = divider;
+            self.tma_clock = 0;
+            self.tima = self.tma;
+        }
     }
 
     pub fn set_div(&mut self, _: u8) {
         self.div = 0;
     }
-    pub fn set_counter(&mut self, v: u8) {
-        self.counter = v;
+    pub fn set_tima(&mut self, v: u8) {
+        // println!("SET TIMA={}", v);
+        self.tima = v;
     }
-    pub fn set_modulo(&mut self, v: u8) {
-        self.modulo = v;
+    pub fn set_tma(&mut self, v: u8) {
+        self.tma = v;
     }
-    pub fn set_enabled(&mut self, enabled: bool) {
+    fn set_enabled(&mut self, enabled: bool) {
         self.enabled = enabled;
     }
-    pub fn set_divider(&mut self, divider: Divider) {
-        self.step = divider as u32;
+    fn set_divider(&mut self, divider: Divider) {
+        self.period = divider as u32;
     }
 
     pub fn step(&mut self, ticks: u32) -> u8 {
         let mut result = 0;
 
-        self.divider_ref += ticks;
+        // Divider
 
-        if self.divider_ref >= 256 {
+        self.div_clock += ticks / 4;
+
+        if self.div_clock >= 256 {
             self.div = self.div.wrapping_add(1);
-            self.divider_ref -= 256;
+            self.div_clock -= 256;
         }
 
         if !self.enabled {
             return 0;
         }
 
-        self.counter_ref += ticks;
+        // Tima
+        
+        self.tma_clock += ticks / 4;
 
-        while self.counter_ref >= self.step {
-            self.counter = self.counter.wrapping_add(1);
+        while self.tma_clock >= self.period {
+            self.tima = self.tima.wrapping_add(1);
 
-            if self.counter == 0 {
-                self.counter = self.modulo;
+            if self.tima == 0 {
+                self.tima = self.tma;
 
-                result = io::intf_raise(0, io::Flag::Timer);
+                result = io::intf_raise(result, io::Flag::Timer);
             }
 
-            self.counter_ref -= self.step;
+            self.tma_clock -= self.period;
         }
 
         return result;
@@ -128,11 +142,30 @@ mod tests {
     use super::*;
 
     #[test]
+    fn divider() {
+        let mut timer = Timer::new();
+        for i in 0..255 { timer.step(1); }
+        assert_eq!(timer.div, 0);
+        timer.step(1);
+        assert_eq!(timer.div, 1);
+        for i in 0..1024 { timer.step(1); }
+        assert_eq!(timer.div, 5);
+    }
+
+    #[test]
     fn interrupt_trigger() {
         let mut timer = Timer::new();
-        let int = timer.step(256 * 255);
-        assert_eq!(int, 0);
-        let int = timer.step(256);
-        assert_eq!(int, (1 << io::Flag::Timer as u8));
+        let mut int = 0;
+        timer.set_tac(0x05);
+        timer.set_tima(0);
+        for i in 0..1024 { int |= timer.step(4); }
+        // println!("TIMA={}", timer.tima);
+        // println!("INTF={}", int);
+        // assert_eq!(int, 0);
+        // for i in 0..500 { int = timer.step(4); }
+        // let int = timer.step(500 * 4);
+        // assert_eq!(int, 4);
+        // let int = timer.step(256);
+        // assert_eq!(int, (1 << io::Flag::Timer as u8));
     }
 }

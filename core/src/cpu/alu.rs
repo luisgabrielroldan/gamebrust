@@ -46,11 +46,13 @@ pub fn add_hl(cpu: &mut CPU, b: u16) {
 }
 
 pub fn add_sp(cpu: &mut CPU, b: i8) {
-    let a = cpu.reg.get_r16(R16::SP) as u32 as i32;
-    let b = b as i32;
-    let r = (a + b) as u16;
-    cpu.reg.flags.h = (a & 0x07FF) + (b & 0x07FF) > 0x07FF;
-    cpu.reg.flags.c = a > 0xFFFF - b;
+    let a = cpu.reg.sp;
+    let b = b as i16 as u16;
+    let r = a.wrapping_add(b);
+    cpu.reg.flags.c = (a & 0x00ff) + (b & 0x00ff) > 0x00ff;
+    cpu.reg.flags.h = (a & 0x000f) + (b & 0x000f) > 0x000f;
+    cpu.reg.flags.n = false;
+    cpu.reg.flags.z = false;
     cpu.reg.set_r16(R16::SP, r);
 }
 

@@ -67,6 +67,7 @@ impl MMU {
         self.intfs |= self.timer.step(ticks);
         self.intfs |= self.ppu.step(ticks);
         self.intfs |= self.joypad.step();
+        self.intfs |= 0xE0;
     }
 
     pub fn get_joypad_adapter(&mut self) -> &mut dyn JoypadAdapter {
@@ -110,8 +111,8 @@ impl MMU {
             0xFF00 => self.joypad.read(),
             0xFF01..=0xFF02 => 0xFF,
             0xFF04 => self.timer.get_div(),
-            0xFF05 => self.timer.get_counter(),
-            0xFF06 => self.timer.get_modulo(),
+            0xFF05 => self.timer.get_tima(),
+            0xFF06 => self.timer.get_tma(),
             0xFF07 => self.timer.get_tac(),
             0xFF0F => self.intfs,
             0xFF10..=0xFF3F => 0, // TODO: Implement sound someday...
@@ -130,8 +131,8 @@ impl MMU {
             0xFF01 => { self.sb = v; }
             0xFF02 => { if v == 0x81 { print!("{}", self.sb as char) } }
             0xFF04 => self.timer.set_div(v),
-            0xFF05 => self.timer.set_counter(v),
-            0xFF06 => self.timer.set_modulo(v),
+            0xFF05 => self.timer.set_tima(v),
+            0xFF06 => self.timer.set_tma(v),
             0xFF07 => self.timer.set_tac(v),
             0xFF0F => { self.intfs = v; }
             0xFF10..=0xFF3F => {} // TODO: Implement sound someday...

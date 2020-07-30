@@ -14,7 +14,7 @@ pub enum Oper {
     ZMemImmU8,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum Cond {
     Always,
     Z,

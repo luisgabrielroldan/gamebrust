@@ -92,7 +92,9 @@ impl PPU {
     pub fn step(&mut self, ticks: u32) -> u8 {
         let mut intfs: u8 = 0;
 
-        self.clock += ticks;
+        if !self.lcd_on { return 0 }
+
+        self.clock += ticks / 4;
 
         match self.mode {
             Mode::OAMSearch => {
@@ -134,6 +136,9 @@ impl PPU {
                     intfs |= self.check_lyc();
 
                     if self.ly > 153 {
+                        // println!("UPDATE!");
+                        self.display.update(&self.framebuffer);
+
                         self.ly = 0;
                         intfs |= self.change_mode(Mode::OAMSearch);
                     }
@@ -149,12 +154,14 @@ impl PPU {
             return;
         }
 
+        // println!("Render ly={}, scx={}", self.ly, self.scx);
+
         let sprites = if self.sprites_enabled { self.oam_search() } else { vec![] };
 
         let win_y = self.ly as i32 - self.wy as i32;
 
         for x in 0..SCREEN_W as u8 {
-            let mut color = 0xFFFFFF;
+            let mut color = 0x9BBC0F;
 
             let bg_y = self.scy.wrapping_add(self.ly);
             let bg_x = self.scx.wrapping_add(x as u8);
@@ -163,7 +170,7 @@ impl PPU {
 
             if self.lcdc0 {
                 if self.window_on && win_y >= 0 && win_x >= 0 {
-                    color = self.get_bg_color(bg_x, bg_y, &self.window_map);
+                    color = self.get_bg_color(win_x as u8, win_y as u8, &self.window_map);
                 } else {
                     color = self.get_bg_color(bg_x, bg_y, &self.background_map);
                 }
@@ -188,12 +195,12 @@ impl PPU {
             .vram
             .read(bg_map_base + (tile_map_x + (tile_map_y << 5)) as u16);
 
-        let color = self.get_tile_color(&self.tile_data, tile_idx, tile_x, tile_y, false);
+        let color = self.get_tile_color(&self.tile_data, tile_idx, tile_x, tile_y, false, false, false);
 
         self.bgp.to_rgb(color)
     }
 
-    fn get_tile_color(&self, set: &TileSet, index: u8, x: u8, y: u8, x_flip: bool) -> u8 {
+    fn get_tile_color(&self, set: &TileSet, index: u8, x: u8, y: u8, x_flip: bool, y_flip: bool, is_sprite: bool) -> u8 {
         let tile_set_base = TileSet::base_addr(&set);
 
         let tile_offset = (if *set == TileSet::Set1 {
@@ -202,7 +209,13 @@ impl PPU {
             ((index as i8 as i16) + 128) as u16
         }) * 16;
 
-        let tile_line_addr = tile_set_base + tile_offset + (y * 2) as u16;
+        let sprite16 = is_sprite && self.sprite_size == SpriteSize::S8x16;
+
+        let tile_line_addr = match (y_flip, sprite16) {
+            (false, _) => tile_offset + (y * 2) as u16,
+            (true, true) => tile_offset + ((15 - y) * 2) as u16,
+            (true, false) => tile_offset + ((7 - y) * 2) as u16,
+        } + tile_set_base;
 
         let b = if x_flip { x } else { 7 - x };
 
@@ -269,12 +282,12 @@ impl PPU {
             };
 
             let color =
-                self.get_tile_color(&TileSet::Set1, sprite.tile, tile_x, tile_y, sprite.x_flip);
+                self.get_tile_color(&TileSet::Set1, sprite.tile, tile_x, tile_y, sprite.x_flip, sprite.y_flip, true);
 
             if color != 0 {
                 current_color = palette.to_rgb(color);
-            } else {
-                current_color = bg;
+            // } else {
+            //     current_color = bg;
             }
         }
 
@@ -286,20 +299,15 @@ impl PPU {
         self.mode = next;
 
         if match self.mode {
-            Mode::OAMSearch => self.oam_inte,
-                Mode::HBlank => {
-                    self.render_line();
-                    self.hblank_inte
-                }
+            Mode::OAMSearch => { self.oam_inte }
+            Mode::HBlank => { self.render_line(); self.hblank_inte }
             Mode::VBlank => {
-                self.display.update(&self.framebuffer);
-
-                intfs = io::intf_raise(0, io::Flag::VBlank);
+                intfs = io::intf_raise(intfs, io::Flag::VBlank);
                 self.vblank_inte
             }
             _ => false,
         } {
-            intfs = io::intf_raise(0, io::Flag::LCDStat);
+            intfs = io::intf_raise(intfs, io::Flag::LCDStat);
         }
 
         intfs
@@ -330,10 +338,13 @@ impl PPU {
             (if self.vblank_inte { 1 << 4 } else { 0 }) |
             (if self.hblank_inte { 1 << 3 } else { 0 }) |
             (if self.ly == self.lyc { 1 << 2 } else { 0 }) |
-            (self.mode as u8)
+            (if self.lcd_on { self.mode as u8 } else { 0 }) |
+            0x80
+
     }
 
     fn set_lcdc(&mut self, v: u8) {
+        let prev_lcd_on = self.lcd_on;
         self.lcd_on = (v & (1 << 7)) != 0;
         self.window_map = if (v & (1 << 6)) != 0 { TileMap::High } else { TileMap::Low };
         self.window_on = (v & (1 << 5)) != 0;
@@ -342,6 +353,8 @@ impl PPU {
         self.sprite_size = if (v & (1 << 2)) != 0 { SpriteSize::S8x16 } else { SpriteSize::S8x8 };
         self.sprites_enabled = (v & (1 << 1)) != 0;
         self.lcdc0 = (v & 1) != 0;
+
+        if prev_lcd_on && !self.lcd_on { self.clock = 0; self.ly = 0; self.mode = Mode::HBlank }
     }
 
     fn set_stat(&mut self, v: u8) {
@@ -379,9 +392,9 @@ impl Memory for PPU {
             0xFF40 => self.set_lcdc(v),
             0xFF41 => self.set_stat(v),
             0xFF42 => self.scy = v,
-            0xFF43 => self.scx = v,
+            0xFF43 => {  self.scx = v },
             0xFF44 => { }
-            0xFF45 => self.lyc = v,
+            0xFF45 => { self.lyc = v }
             0xFF47 => { self.bgp = Palette::from(v); }
             0xFF48 => { self.obp0 = Palette::from(v); }
             0xFF49 => { self.obp1 = Palette::from(v); }

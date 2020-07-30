@@ -41,19 +41,17 @@ impl CPU {
     }
 
     pub fn step(&mut self, mem: &mut dyn Memory) -> u32 {
-        let mc = self.handle_interrupts(mem);
-
         self.handle_ime();
 
-        let ticks = if mc != 0 {
+        let mc = self.handle_interrupts(mem);
+
+        if mc != 0 {
             mc * 4
         } else if self.halted {
             4
         } else {
             self.execute_next(mem) * 4
-        };
-
-        ticks
+        }
     }
 
     fn handle_interrupts(&mut self, mem: &mut dyn Memory) -> u32 {
@@ -61,8 +59,8 @@ impl CPU {
             return 0;
         }
 
-        let intfs = mem.read(0xFF0F);
-        let inte = mem.read(0xFFFF);
+        let intfs = mem.read(0xFF0F) & 0x1F;
+        let inte = mem.read(0xFFFF) & 0x1F;
 
         let filtered_intfs = inte & intfs;
 
@@ -90,10 +88,10 @@ impl CPU {
         self.reg.pc = self.get_int_routine_addr(int_index);
 
         // if int_index == 0 {
-        //     println!("INTERRUPT {:04x} EXECUTED! {:02x}-{:02x}", self.reg.pc, inte, intfs);
+            // println!("INTERRUPT {:04x} EXECUTED!", self.reg.pc);
         // }
 
-        5
+        4
     }
 
     fn get_int_routine_addr(&self, n: u8) -> u16 {
@@ -101,7 +99,30 @@ impl CPU {
     }
 
     fn handle_ime(&mut self) {
-        self.ime = self.ime_next;
+        if self.ime_next {
+            self.ime = true;
+            self.ime_next = false;
+        }
+    }
+
+    fn dump(&mut self, mem: &mut dyn Memory) {
+        use Opcode::*;
+
+        self.reg.dump();
+        let op1 = mem.read(self.reg.pc);
+        let op2 = mem.read(self.reg.pc + 1);
+        let op3 = mem.read(self.reg.pc + 2);
+
+        let opcode = match decoder::decode(op1) {
+            Some(PREFIX) => decoder::decode_prefix(op2),
+            Some(opcode) => opcode,
+            None => panic!("Unknown opcode 0x{:02X}!", op1),
+        };
+
+        println!("TIMA: {}  TAC: {:02X}  DIV: {}", mem.read(0xFF05), mem.read(0xFF07), mem.read(0xFF04));
+        println!("IE: {:02X}  IF: {:02X}  IME: {}", mem.read(0xFFFF), mem.read(0xFF0F), self.ime);
+        println!("LCDC: {:02X} STAT: {:02X} LY: {:02X}", mem.read(0xFF40), mem.read(0xFF41), mem.read(0xFF44));
+        println!("00:{:04X}:  {:02X}{:02X}{:02X}  {:?}\n", self.reg.pc, op1,op2,op3, opcode);
     }
 
     fn execute_next(&mut self, mem: &mut dyn Memory) -> u32 {
@@ -110,21 +131,21 @@ impl CPU {
         use Opcode::*;
         use Oper::*;
 
-        let instr_addr = self.reg.pc;
+        // let instr_addr = self.reg.pc;
+
+        // if self.reg.pc >= 0xC317 && self.reg.pc <= 0xC355 {
+        // if self.reg.pc == 0x50 {
+        //     self.dump(mem);
+        // }
 
         let imm = self.imm_u8(mem);
 
-        // if imm == 0xFF { panic!("{:04X} - {:02X}", instr_addr, imm); }
-
+        // if imm == 0xE6 { println!("{:04X} - {:02X}", instr_addr, imm); }
         let opcode = match decoder::decode(imm) {
             Some(PREFIX) => decoder::decode_prefix(self.imm_u8(mem)),
             Some(opcode) => opcode,
             None => panic!("Unknown opcode 0x{:02X}!", imm),
         };
-
-        // self.reg.dump();
-
-        // println!("{:04X}\t\t{:?}", instr_addr, opcode);
 
         let cycles = match opcode {
             /*==============================*\
@@ -644,7 +665,7 @@ impl CPU {
             // JP (Cond) u16
             JP(cond, ImmU16) => {
                 let a = self.imm_u16(mem);
-                if self.check_cond(cond) {
+                if self.check_cond(cond.clone()) {
                     self.reg.pc = a;
                     4
                 } else {
@@ -723,9 +744,15 @@ impl CPU {
             }
             // LD HL, SP+i8
             LD(Reg16(HL), SPImmI8) => {
-                let imm = self.imm_i8(mem);
-                let v = self.add_u16_i8(self.reg.sp, imm);
-                self.reg.set_r16(HL, v);
+                let a = self.reg.sp;
+                let b = self.imm_i8(mem) as i16 as u16;
+                let r = a.wrapping_add(b);
+                self.reg.flags.c = (a & 0x00ff) + (b & 0x00ff) > 0x00ff;
+                self.reg.flags.h = (a & 0x000f) + (b & 0x000f) > 0x000f;
+                self.reg.flags.n = false;
+                self.reg.flags.z = false;
+                self.reg.set_r16(HL, r);
+
                 3
             }
             PUSH(Reg16(r)) => {

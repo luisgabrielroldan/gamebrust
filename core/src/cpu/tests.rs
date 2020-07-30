@@ -146,3 +146,40 @@ fn set_instrs() {
     assert_eq!(cpu.reg.h, 0xFF);
     assert_eq!(cpu.reg.l, 0xFF);
 }
+
+#[test]
+fn pop_instr() {
+    const INSTRS: [u8; 24] = [
+     0xF5,0x00,0x00,     // PUSH AF
+     0xC5,0x00,0x00,     // PUSH BC
+     0xD5,0x00,0x00,     // PUSH DE
+     0xE5,0x00,0x00,     // PUSH HL
+     0xF1,0x00,0x00,     // POP  AF
+     0xC1,0x00,0x00,     // POP  BC
+     0xD1,0x00,0x00,     // POP  DE
+     0xE1,0x00,0x00,     // POP  HL
+    ];
+
+    let mut mem = Ram::new(0x100);
+    let mut cpu = CPU::new();
+
+    for i in 0..INSTRS.len() {
+        mem.write(i as u16, INSTRS[i]);
+    }
+
+    cpu.reg.set_r16(R16::AF, 0xA4A0);
+    cpu.reg.set_r16(R16::BC, 0xB4B8);
+    cpu.reg.set_r16(R16::DE, 0xC4C8);
+    cpu.reg.set_r16(R16::HL, 0xD4D8);
+    cpu.reg.sp = 0x100;
+
+    for _i in 0..INSTRS.len() {
+        cpu.step(&mut mem);
+    }
+
+    assert_eq!(0xD4D0, cpu.reg.get_r16(R16::AF));
+    assert_eq!(0xC4C8, cpu.reg.get_r16(R16::BC));
+    assert_eq!(0xB4B8, cpu.reg.get_r16(R16::DE));
+    assert_eq!(0xA4A0, cpu.reg.get_r16(R16::HL));
+    assert_eq!(0x100, cpu.reg.get_r16(R16::SP));
+}

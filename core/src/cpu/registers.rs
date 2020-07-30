@@ -28,7 +28,6 @@ pub struct Flags {
     pub n: bool,
     pub h: bool,
     pub c: bool,
-    low: u8,
 }
 
 impl Flags {
@@ -38,7 +37,6 @@ impl Flags {
             n: false,
             h: false,
             c: false,
-            low: 0,
         }
     }
 
@@ -47,7 +45,6 @@ impl Flags {
         self.n = (v & (1 << 6)) != 0;
         self.h = (v & (1 << 5)) != 0;
         self.c = (v & (1 << 4)) != 0;
-        self.low = v & 0x0F;
     }
 
     pub fn to_u8(&self) -> u8 {
@@ -55,7 +52,6 @@ impl Flags {
             | (if self.n { 1 << 6 } else { 0 })
             | (if self.h { 1 << 5 } else { 0 })
             | (if self.c { 1 << 4 } else { 0 })
-            | (self.low & 0xF)
     }
 }
 
@@ -164,34 +160,34 @@ impl Registers {
 
     pub fn dump(&self) {
         println!(
-            "A: {:X?}  F: {:X?}  (AF: {:#06X?})",
+            "A: {:02X}  F: {:02X}  (AF: {:04X})",
             self.a,
             self.flags.to_u8(),
             self.get_r16(R16::AF)
         );
 
         println!(
-            "B: {:X?}  C: {:X?}  (BC: {:#06X?})",
+            "B: {:02X}  C: {:02X}  (BC: {:03X})",
             self.b,
             self.c,
             self.get_r16(R16::BC)
         );
 
         println!(
-            "D: {:X?}  E: {:X?}  (DE: {:#06X?})",
+            "D: {:02X}  E: {:02X}  (DE: {:04X})",
             self.d,
             self.e,
             self.get_r16(R16::DE)
         );
 
         println!(
-            "H: {:X?}  L: {:X?}  (HL: {:#06X?})",
+            "H: {:02X}  L: {:02X}  (HL: {:04X})",
             self.h,
             self.l,
             self.get_r16(R16::HL)
         );
 
-        println!("PC: {:#06X?}  SP: {:#06X?}", self.pc, self.sp);
+        println!("PC: {:04X}  SP: {:04X}", self.pc, self.sp);
 
         let mut flags = String::new();
         if self.flags.z { flags.push_str("Z"); } else { flags.push_str("-"); }
@@ -199,7 +195,7 @@ impl Registers {
         if self.flags.h { flags.push_str("H"); } else { flags.push_str("-"); }
         if self.flags.c { flags.push_str("C"); } else { flags.push_str("-"); }
 
-        println!("F: [----]");
+        println!("F: [{}]", flags);
     }
 }
 
@@ -219,7 +215,7 @@ mod tests {
         regs.set_r16(R16::PC, 0xBEEF);
 
         assert_eq!(0xBE, regs.a);
-        assert_eq!(0xEF, regs.flags.to_u8());
+        assert_eq!(0xE0, regs.flags.to_u8());
         assert_eq!(0xBE, regs.b);
         assert_eq!(0xEF, regs.c);
         assert_eq!(0xBE, regs.d);
@@ -229,7 +225,7 @@ mod tests {
         assert_eq!(0xBEEF, regs.sp);
         assert_eq!(0xBEEF, regs.pc);
 
-        assert_eq!(0xBEEF, regs.get_r16(R16::AF));
+        assert_eq!(0xBEE0, regs.get_r16(R16::AF));
         assert_eq!(0xBEEF, regs.get_r16(R16::BC));
         assert_eq!(0xBEEF, regs.get_r16(R16::DE));
         assert_eq!(0xBEEF, regs.get_r16(R16::HL));
