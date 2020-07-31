@@ -94,7 +94,7 @@ impl PPU {
 
         if !self.lcd_on { return 0 }
 
-        self.clock += ticks / 4;
+        self.clock += ticks;
 
         match self.mode {
             Mode::OAMSearch => {

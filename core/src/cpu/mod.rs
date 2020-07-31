@@ -50,7 +50,7 @@ impl CPU {
         } else if self.halted {
             4
         } else {
-            self.execute_next(mem) * 4
+            self.execute_next(mem) 
         }
     }
 

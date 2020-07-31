@@ -8,7 +8,7 @@ use cpu::CPU;
 use memory::MMU;
 use cartridge::Cartridge;
 use crate::io::joypad::JoypadAdapter;
-use std::time::Instant;
+use std::path::Path;
 
 // pub const CLOCK_FREQUENCY: u32 = 4_194_304;
 // pub const BATCH_TIME: u32 = 1;
@@ -38,9 +38,10 @@ impl System {
         }
     }
 
-    pub fn step(&mut self) {
+    pub fn step(&mut self) -> u32 {
         let ticks = self.cpu.step(&mut self.mmu);
         self.mmu.step(ticks);
+        ticks
     }
 
     pub fn get_joypad_adapter(&mut self) -> &mut dyn JoypadAdapter {
@@ -60,7 +61,7 @@ mod tests {
     #[test]
     fn create_system() {
         let cartridge =
-            match Cartridge::from_path("../roms/tetris.gb") {
+            match Cartridge::from_path(Path::new("../roms/tetris.gb")) {
                 Ok(cartridge) => cartridge,
                 _ => panic!("Error!"),
             };

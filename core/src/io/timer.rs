@@ -106,7 +106,7 @@ impl Timer {
 
         // Divider
 
-        self.div_clock += ticks / 4;
+        self.div_clock += ticks;
 
         if self.div_clock >= 256 {
             self.div = self.div.wrapping_add(1);

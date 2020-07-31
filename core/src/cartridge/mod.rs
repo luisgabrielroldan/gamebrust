@@ -5,6 +5,7 @@ use self::mbc::MBC1;
 use super::memory::Memory;
 use std::fs::File;
 use std::io::Read;
+use std::path::Path;
 
 const KB: usize = 1024;
 const MB: usize = 1024 * 1024;
@@ -15,7 +16,7 @@ pub struct Cartridge {
 }
 
 impl Cartridge {
-    pub fn from_path(rom_path: &str) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn from_path(rom_path: &Path) -> Result<Self, Box<dyn std::error::Error>> {
         let mut file = File::open(rom_path)?;
         let mut rom_data = Vec::new();
         file.read_to_end(&mut rom_data)?;
@@ -153,7 +154,7 @@ mod tests {
     #[test]
     fn load_rom() {
         let cartridge =
-            match Cartridge::from_path("../roms/pacman.gb") {
+            match Cartridge::from_path(Path::new("../roms/pacman.gb")) {
                 Ok(cartridge) => cartridge,
                 _ => panic!("Error!"),
             };
