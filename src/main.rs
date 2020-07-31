@@ -91,7 +91,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     loop {
 
-        system.step();
+        for _ in 0..100 {
+            system.step();
+        }
 
         {
             let window = window_rc.borrow_mut();

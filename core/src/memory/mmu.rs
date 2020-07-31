@@ -62,11 +62,13 @@ impl MMU {
     }
 
     pub fn step(&mut self, ticks: u32) {
+
         self.handle_oam_dma(ticks);
 
         self.intfs |= self.timer.step(ticks);
         self.intfs |= self.ppu.step(ticks);
         self.intfs |= self.joypad.step();
+
         self.intfs |= 0xE0;
     }
 

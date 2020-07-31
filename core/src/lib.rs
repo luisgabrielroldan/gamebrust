@@ -8,6 +8,11 @@ use cpu::CPU;
 use memory::MMU;
 use cartridge::Cartridge;
 use crate::io::joypad::JoypadAdapter;
+use std::time::Instant;
+
+// pub const CLOCK_FREQUENCY: u32 = 4_194_304;
+// pub const BATCH_TIME: u32 = 1;
+// pub const BATCH_TICKS: u32 = (BATCH_TIME as f64 / (1000_f64 / CLOCK_FREQUENCY as f64)) as u32;
 
 pub trait Display {
     fn update(&mut self, _framebuffer: &Vec<u32>) { }
