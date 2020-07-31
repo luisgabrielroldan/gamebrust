@@ -13,6 +13,8 @@ use core::System;
 use std::time::Instant;
 use std::path::Path;
 
+const BATCH_TICKS: u32 = (16 as f64 * (4_194_304 as f64 / 1000_f64)) as u32;
+
 struct UI {
     frame_tx: Sender<Vec<u32>>
 }
@@ -70,15 +72,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let mut last_step = Instant::now();
 
         let mut ticks = 0;
+
         loop {
             last_step = Instant::now();
-            let batch_ticks = (16 as f64 * (4_194_304 as f64 / 1000_f64)) as u32;
 
-            while ticks < batch_ticks {
+            while ticks < BATCH_TICKS {
                 ticks += system.step();
             }
 
-            ticks -= batch_ticks;
+            ticks -= BATCH_TICKS;
 
             while (last_step.elapsed().as_millis() as u32) < 16 {
                 let joypad = system.get_joypad_adapter();

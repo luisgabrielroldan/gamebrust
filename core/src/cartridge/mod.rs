@@ -2,6 +2,7 @@ pub mod mbc;
 
 use self::mbc::RomOnly;
 use self::mbc::MBC1;
+use self::mbc::MBC3;
 use super::memory::Memory;
 use std::fs::File;
 use std::io::Read;
@@ -26,7 +27,8 @@ impl Cartridge {
         let mbc: Box<dyn Memory> = match header.mbc_type {
             0x00 => Box::new(RomOnly::new(&header, rom_data)),
             0x01 => Box::new(MBC1::new(&header, rom_data)),
-            t => panic!("Unsupported cartridge type: {:02x}", t),
+            0x13 => Box::new(MBC3::new(&header, rom_data)),
+            t => panic!("Unsupported cartridge type: 0x{:02x}", t),
         };
 
         Ok(Self {
