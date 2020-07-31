@@ -10,6 +10,8 @@ const SCREEN_H: u16 = 144;
 const VRAM_SIZE: usize = 0x4000;
 const VOAM_SIZE: usize = 0xA0;
 
+const COLORS: [u32; 4] = [0xACB56A, 0x848F58, 0x404d40, 0x2c373d];
+
 pub struct PPU {
     clock: u32,
     framebuffer: Vec<u32>,
@@ -61,7 +63,7 @@ impl PPU {
         Self {
             clock: 0,
             display: display,
-            framebuffer: vec![0xCADC9F; (SCREEN_W * SCREEN_H) as usize],
+            framebuffer: vec![COLORS[0]; (SCREEN_W * SCREEN_H) as usize],
             vram: Ram::new(VRAM_SIZE),
             voam: [0; VOAM_SIZE],
             mode: Mode::HBlank,
@@ -161,7 +163,7 @@ impl PPU {
         let win_y = self.ly as i32 - self.wy as i32;
 
         for x in 0..SCREEN_W as u8 {
-            let mut color = 0x9BBC0F;
+            let mut color = 0xACB56B;
 
             let bg_y = self.scy.wrapping_add(self.ly);
             let bg_x = self.scx.wrapping_add(x as u8);
@@ -460,13 +462,7 @@ impl std::convert::From<u8> for Palette {
         let mut render: [u32; 4] = [0; 4];
 
         for i in 0..4 {
-            render[i] = 
-                match (value >> (i * 2)) & 0x03 {
-                    0 => 0x9BBC0F,
-                    1 => 0x8BAC0F,
-                    2 => 0x306230,
-                    _ => 0x0F380F,
-                };
+            render[i] = COLORS[((value >> (i * 2)) & 0x03) as usize];
         }
 
         Self {
