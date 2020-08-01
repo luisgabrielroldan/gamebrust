@@ -1,9 +1,12 @@
 # GameBRust
 
+![Pokemon Red](/images/pokemon_red.gif) ![Mario Land](/images/mario.gif)
+
 This is a Gameboy Emulator toy project.
 
-I was curious about to learn rust and decided to start with something that also has my interest: the console emulators.
+I was curious about learning Rust and decided to start with something that also has my interest: the console emulators.
 
-So this is a small project that I used to understand the concepts related to the emulatation and also gain some basic understanding of Rust.
+So this is a small project that I made to understand the concepts related to the emulation and also gain some basic understanding of Rust.
 
-It passes the Blargg's Gameboy tests for CPU instructions.
+BTW: It doesn't implement any Save feature! (yet)
+
